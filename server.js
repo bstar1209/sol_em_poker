@@ -325,8 +325,6 @@ socketio.on('connection', function (socket) {
       makeDeck()
       shuffleDeck()
 
-      console.log(cards)
-
       for (let i = (tmpDealer.tableSeat + 1) % 10, j = 0; ;) {
         let tmpPlayer = room.players.find(elem => elem.tableSeat == i)
         if (tmpPlayer) {
