@@ -53,6 +53,30 @@ let roomList = [];
 
 let unqueRoomId = 0;
 
+let cards = new Array(52);
+
+// make the deck
+let makeDeck = () => {
+  var i;
+  var j = 0;
+  for (i = 2; i <= 14; i++) {
+    cards[j++] = "h" + i;
+    cards[j++] = "d" + i;
+    cards[j++] = "c" + i;
+    cards[j++] = "s" + i;
+  }
+}
+
+// shuffle the deck
+let shuffleDeck = () => {
+  for (var i = 0; i < cards.length; ++i) {
+    var j = Math.floor(Math.random() * (cards.length - 1));
+    var tmp = cards[i];
+    cards[i] = cards[j];
+    cards[j] = tmp;
+  }
+}
+
 let checkSignIn = (req, res, next) => {
   if (req.session.user) {
     next();     // If session exists, proceed to page
@@ -156,6 +180,7 @@ socketio.on('connection', function (socket) {
       turn: false,
       scene: 'WaitScene',
       tableSeat: 0,
+      handed: [],
     }
 
     const index = playerList.findIndex((elem) => elem.username == data.username);
@@ -236,7 +261,7 @@ socketio.on('connection', function (socket) {
     }
 
     player.roomId = data.roomId; // assign the room id
-    
+
     let randomSeat = Math.floor(Math.random() * 10);
 
     while (room.players.find(elem => elem.tableSeat == randomSeat)) {
@@ -291,8 +316,32 @@ socketio.on('connection', function (socket) {
     player.ready = true
     socket.emit('ready');
 
-    if (room.players.filter(elem => elem.ready).length == MAX_ROOM_PLAYERS) {
+    if (room.players.filter(elem => elem.ready).length == MAX_ROOM_PLAYERS) { // all players are ready
       room.status = 'playing'
+
+      let tmpDealer = room.players[Math.floor(Math.random() * room.players.length)]
+      tmpDealer.dealer = true;
+
+      makeDeck()
+      shuffleDeck()
+
+      console.log(cards)
+
+      for (let i = (tmpDealer.tableSeat + 1) % 10, j = 0; ;) {
+        let tmpPlayer = room.players.find(elem => elem.tableSeat == i)
+        if (tmpPlayer) {
+          tmpPlayer.handed[0] = cards[j++]
+          tmpPlayer.handed[1] = cards[j++]
+        }
+
+        if (i == tmpDealer.tableSeat) {
+          break;
+        }
+
+        i++
+        i = i % 10
+      }
+
       // room.players[0].turn = true
 
       // room.players[0].hero.manabar = 1;
@@ -301,7 +350,9 @@ socketio.on('connection', function (socket) {
       // room.players[0].scene = 'BattleScene';
       // room.players[1].scene = 'BattleScene';
 
-      broadcastToRoom(player.roomId, '', 'start-table', room)
+      broadcastToRoom(player.roomId, '', 'start-table', {
+        players: room.players
+      })
     }
   })
 

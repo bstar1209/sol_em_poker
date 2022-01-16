@@ -72,7 +72,7 @@ socket.on('join-room', (data) => {
     currentScene.scene.start("PokerTableScene");
   } else { // other join your room
     curRoom.players.push(data.player)
-    currentScene.joinPlayer(data.player)
+    currentScene.joinToRoom(data.player)
   }
 })
 
@@ -115,8 +115,8 @@ socket.on('bet-card', (data) => {
   currentScene.betCard(data)
 })
 
-socket.on('start-table', () => {
-  currentScene.startTable()
+socket.on('start-table', (data) => {
+  currentScene.startTable(data.players)
 })
 
 let changeTurn = (username) => {
