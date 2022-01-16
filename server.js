@@ -320,16 +320,18 @@ socketio.on('connection', function (socket) {
       room.status = 'playing'
 
       let tmpDealer = room.players[Math.floor(Math.random() * room.players.length)]
-      tmpDealer.dealer = true;
+      tmpDealer.turn = true;
 
       makeDeck()
       shuffleDeck()
 
+      // assign two cards into players
       for (let i = (tmpDealer.tableSeat + 1) % 10, j = 0; ;) {
         let tmpPlayer = room.players.find(elem => elem.tableSeat == i)
         if (tmpPlayer) {
           tmpPlayer.handed[0] = cards[j++]
           tmpPlayer.handed[1] = cards[j++]
+          tmpPlayer.turn = false;
         }
 
         if (i == tmpDealer.tableSeat) {
@@ -340,13 +342,17 @@ socketio.on('connection', function (socket) {
         i = i % 10
       }
 
-      // room.players[0].turn = true
+      // set the turn
+      for (let i = (tmpDealer.tableSeat + 1) % 10; ;) {
+        let tmpPlayer = room.players.find(elem => elem.tableSeat == i)
+        if (tmpPlayer) {
+          tmpPlayer.turn = true
+          break;
+        }
 
-      // room.players[0].hero.manabar = 1;
-      // room.players[0].hero.mana = 1;
-
-      // room.players[0].scene = 'BattleScene';
-      // room.players[1].scene = 'BattleScene';
+        i++
+        i = i % 10
+      }
 
       broadcastToRoom(player.roomId, '', 'start-table', {
         players: room.players
