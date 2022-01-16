@@ -13,3 +13,5 @@ export const DB_PORT='27017'
 export const DB_USERNAME=''
 export const DB_PASSWORD=''
 export const DB_NAME='sol_em_poker'
+
+export const MAX_ROOM_PLAYERS = 2

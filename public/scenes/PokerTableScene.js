@@ -9,12 +9,19 @@ var PokerTableScene = new Phaser.Class({
     this.load.image('poker_table', 'images/poker_table.png'); // table image for the scene
 
     this.load.image('poker_user', 'images/poker_user.png'); // table image for the scene
+
+    this.load.image('ready', 'images/ready.png');
   },
   create: function () {
     currentScene = this;
 
     this.pokerBoard = this.add.image(0, 0, 'poker_board').setOrigin(0).setScale(1)
-
+    this.readyBtn = this.add.image(0, 0, 'ready').setOrigin(0).setScale(1).setInteractive().on('pointerup', (pointer) => {
+      sendReady({
+        username: username,
+      });
+    });
+    
     this.pokerTable = this.add.container(this.pokerBoard.width / 2, this.pokerBoard.height / 2)
     this.pokerTable.add(this.add.image(0, 0, 'poker_table').setOrigin(0.5, 0.5).setScale(1));
 
@@ -47,4 +54,10 @@ var PokerTableScene = new Phaser.Class({
     player.group.add(this.add.image(0, 0, 'poker_user').setOrigin(0.5, 0.5).setScale(0.2)) // assign the avatar
     player.group.add(this.add.text(0, 0, `${player.username}`, { font: "bold 28px Arial", fill: "#fff" }))
   },
+  setReady: function () {
+    this.readyBtn.visible = false
+  },
+  startTable: function () {
+    console.log('started')
+  }
 });

@@ -5,6 +5,7 @@ import { createServer } from 'http';
 import session from 'express-session';
 import cookieParser from 'cookie-parser';
 
+import { MAX_ROOM_PLAYERS } from './config/index.js'
 
 const app = express();
 const server = createServer(app);
@@ -229,7 +230,7 @@ socketio.on('connection', function (socket) {
       return;
     }
 
-    if (room.players.length >= 3) {
+    if (room.players.length >= MAX_ROOM_PLAYERS) {
       console.log('players are limited')
       return;
     }
@@ -278,7 +279,7 @@ socketio.on('connection', function (socket) {
     player.hero.nft = data.hero;
   })
 
-  socket.on('ready-battle', (data) => {
+  socket.on('ready', (data) => {
     let player = getPlayer(data.username);
     let room = getRoom(player.roomId);
 
@@ -287,51 +288,20 @@ socketio.on('connection', function (socket) {
       return;
     }
 
-    player.minions = []
-    for (let i = 0; i < data.minions.length; i++) {
-      player.minions.push(Minions.getMinion(data.minions[i]))
-    }
-
-    if (player.minions.length != 12) {
-      console.log("please select 12 minions")
-      return;
-    }
-
-    player.spells = []
-    for (let i = 0; i < data.spells.length; i++) {
-      player.spells.push(Spells.getSpell(data.spells[i]))
-    }
-
-    if (player.spells.length != 7) {
-      console.log("please select 7 spells")
-      return;
-    }
-
-    player.sortedCards = player.minions.concat(player.spells) // merge with minions and spells
-    player.sortedCards.sort((a, b) => 0.5 - Math.random()) // shuffle the spells
-
-    player.minions = []
-    player.spells = []
-
-    for (let i = 0; i < 4; i++) { // hand 4 card at first
-      player.sortedCards[i].handed = true;
-    }
-
     player.ready = true
-    player.scene = 'LoadingScene'
-    socket.emit('ready-battle', room);
+    socket.emit('ready');
 
-    if (room.players.filter(elem => elem.ready).length == 2) {
-      room.status = 'battle'
-      room.players[0].turn = true
+    if (room.players.filter(elem => elem.ready).length == MAX_ROOM_PLAYERS) {
+      room.status = 'playing'
+      // room.players[0].turn = true
 
-      room.players[0].hero.manabar = 1;
-      room.players[0].hero.mana = 1;
+      // room.players[0].hero.manabar = 1;
+      // room.players[0].hero.mana = 1;
 
-      room.players[0].scene = 'BattleScene';
-      room.players[1].scene = 'BattleScene';
+      // room.players[0].scene = 'BattleScene';
+      // room.players[1].scene = 'BattleScene';
 
-      broadcastToRoom(player.roomId, 'start-battle', room)
+      broadcastToRoom(player.roomId, '', 'start-table', room)
     }
   })
 

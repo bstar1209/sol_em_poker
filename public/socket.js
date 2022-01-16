@@ -96,12 +96,12 @@ let selectHero = (username, hero) => {
   });
 }
 
-let sendReadyBattle = (data) => {
-  socket.emit('ready-battle', data);
+let sendReady = (data) => {
+  socket.emit('ready', data);
 }
 
-socket.on('ready-battle', (room) => {
-  currentScene.scene.start("LoadingScene");
+socket.on('ready', () => {
+  currentScene.setReady()
 })
 
 let betMinionOrSpell = (username, card) => {
@@ -115,11 +115,8 @@ socket.on('bet-card', (data) => {
   currentScene.betCard(data)
 })
 
-socket.on('start-battle', (room) => {
-  armyProfile = room.players.find(elem => elem.username == username)
-  enemyProfile = room.players.find(elem => elem.username != username)
-
-  currentScene.scene.start("BattleScene");
+socket.on('start-table', () => {
+  currentScene.startTable()
 })
 
 let changeTurn = (username) => {
