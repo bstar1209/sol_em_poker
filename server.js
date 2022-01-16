@@ -250,6 +250,11 @@ socketio.on('connection', function (socket) {
       username: player.username,
       room: room,
     })
+
+    broadcastToRoom(player.roomId, player.id, 'join-room', {
+      username: player.username,
+      player: player,
+    });
   })
 
   socket.on('leave-room', (data) => {
@@ -547,17 +552,17 @@ let getRoom = (roomId) => {
   return room;
 }
 
-let broadcastToRoom = (roomId, command, data) => {
+let broadcastToRoom = (roomId, playerId, command, data) => { // playerId: expected id
   let room = getRoom(roomId);
   for (let i = 0; i < room.players.length; i++) {
     const elem = room.players[i];
-    if (socketio.sockets.sockets.get(elem.id)) {
+    if (elem.id != playerId && socketio.sockets.sockets.get(elem.id)) {
       socketio.sockets.sockets.get(elem.id).emit(command, data);
     }
   }
 }
 
-let broadcastToPlayer = (playerId, command, data) => {
+let broadcastToPlayer = (playerId, command, data) => { // playerId: expected id
   playerList.filter((elem) => {
     if (elem.id != playerId) {
       if (socketio.sockets.sockets.get(elem.id)) {

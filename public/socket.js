@@ -66,7 +66,14 @@ let sendJoinRoom = (username, roomId) => {
   })
 }
 
-socket.on('join-room', () => {
+socket.on('join-room', (data) => {
+  if (data.username == username) { // you join the room
+    curRoom = data.room;
+  } else { // other join your room
+    curRoom.players.push(data.player)
+  }
+  console.log(curRoom) 
+
   currentScene.scene.start("PokerTableScene");
 })
 
