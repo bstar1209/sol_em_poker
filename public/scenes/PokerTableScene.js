@@ -31,12 +31,20 @@ var PokerTableScene = new Phaser.Class({
       [370, 0],
     ];
 
-    this.pokerUser = this.add.container(this.seatPos[curRoom.players[0].tableSeat][0], this.seatPos[curRoom.players[0].tableSeat][1])
-    this.pokerTable.add(this.pokerUser)
+    for (let i = 0; i < curRoom.players.length; i++) {
+      curRoom.players[i].group = this.add.container(this.seatPos[curRoom.players[i].tableSeat][0], this.seatPos[curRoom.players[i].tableSeat][1])
 
-    this.pokerUser.add(this.add.image(0, 0, 'poker_user').setOrigin(0.5, 0.5).setScale(0.2)) // assign the avatar
-    this.pokerUser.add(this.add.image(0, 0, 'poker_user').setOrigin(0.5, 0.5).setScale(0.2)) // assign the avatar
+      this.pokerTable.add(curRoom.players[i].group) // sit the player on the table
 
-    this.pokerUser.add(this.add.text(0, 0, `${curRoom.players[0].username}`, { font: "bold 28px Arial", fill: "#fff" }))
+      curRoom.players[i].group.add(this.add.image(0, 0, 'poker_user').setOrigin(0.5, 0.5).setScale(0.2)) // assign the avatar
+      curRoom.players[i].group.add(this.add.text(0, 0, `${curRoom.players[i].username}`, { font: "bold 28px Arial", fill: "#fff" }))
+    }
+  },
+  joinPlayer: function (player) {
+    player.group = this.add.container(this.seatPos[player.tableSeat][0], this.seatPos[player.tableSeat][1])
+    this.pokerTable.add(player.group) // sit the player on the table
+
+    player.group.add(this.add.image(0, 0, 'poker_user').setOrigin(0.5, 0.5).setScale(0.2)) // assign the avatar
+    player.group.add(this.add.text(0, 0, `${player.username}`, { font: "bold 28px Arial", fill: "#fff" }))
   },
 });

@@ -69,12 +69,11 @@ let sendJoinRoom = (username, roomId) => {
 socket.on('join-room', (data) => {
   if (data.username == username) { // you join the room
     curRoom = data.room;
+    currentScene.scene.start("PokerTableScene");
   } else { // other join your room
     curRoom.players.push(data.player)
+    currentScene.joinPlayer(data.player)
   }
-  console.log(curRoom) 
-
-  currentScene.scene.start("PokerTableScene");
 })
 
 // leave the room
