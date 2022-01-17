@@ -139,6 +139,10 @@ socket.on('start-table', (data) => {
   currentScene.startTable(data.players)
 })
 
+socket.on('new-round', (data) => {
+  currentScene.newRound(data.players);
+})
+
 socket.on('change-turn', (data) => {
   currentScene.operateTurn(data)
 })

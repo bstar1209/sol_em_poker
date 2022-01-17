@@ -209,7 +209,7 @@ var PokerTableScene = new Phaser.Class({
     }
   },
   operateTurn: function (data) {
-    let tmpPlayer = curRoom.players.find(elem => elem.username == data.nextUsername);
+    let tmpPlayer = curRoom.players.find(elem => elem.username == data.nextUser.username);
 
     if (tmpPlayer.username == username) {
       this.foldBtn.visible = false
@@ -220,14 +220,36 @@ var PokerTableScene = new Phaser.Class({
     }
   },
   layCard: function (data) {
-    console.log(curRoom)
-    console.log(data)
-
     let diffArr =  data.cards.filter(e => !curRoom.layedCards.includes(e))
-    console.log(diffArr)
 
     for (let i = 0; i < diffArr.length; i++) {
       this.layedCardsGroup.add(this.add.image(60 * i + curRoom.layedCards.length, 0, diffArr[i]).setOrigin(0).setScale(0.1))
+    }
+  },
+  newRound: function (players) {
+    for (let i = 0; i < players.length; i++) {
+      let tmpPlayer = curRoom.players.find(elem => elem.username == players[i].username);
+      tmpPlayer.turn = players[i].turn
+
+      tmpPlayer.game_coin = players[i].game_coin
+      tmpPlayer.total_bet = players[i].total_bet
+      tmpPlayer.bet = players[i].bet
+
+      tmpPlayer.group.list[2].setColor('#fff')
+      tmpPlayer.group.list[3].setText(`Bet: $${tmpPlayer.bet} (${tmpPlayer.total_bet})`)
+      tmpPlayer.group.list[4].setText(`$${tmpPlayer.game_coin}`)
+    }
+
+    curRoom.players.find(elem => elem.turn).group.list[2].setColor('#f00')
+
+    tmpPlayer = curRoom.players.find(elem => elem.username == username);
+
+    if (tmpPlayer.turn) {
+      this.foldBtn.visible = false
+      this.raiseBtn.visible = false
+      this.checkBtn.visible = true
+
+      this.pluschipBtn.visible = true
     }
   },
   getCardName: function (card) {

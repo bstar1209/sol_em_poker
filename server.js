@@ -323,8 +323,6 @@ socketio.on('connection', function (socket) {
     socket.emit('ready');
 
     if (room.players.filter(elem => elem.ready).length == MAX_ROOM_PLAYERS) { // all players are ready
-      room.status = 'playing'
-
       let tmpDealer = room.players[Math.floor(Math.random() * room.players.length)]
       tmpDealer.dealer = true;
 
@@ -335,6 +333,8 @@ socketio.on('connection', function (socket) {
       for (let i = (tmpDealer.tableSeat + 1) % 10, j = 0; ;) {
         let tmpPlayer = room.players.find(elem => elem.tableSeat == i)
         if (tmpPlayer) {
+          tmpPlayer.status = 'playing'
+
           tmpPlayer.handed[0] = cards[j++]
           tmpPlayer.handed[1] = cards[j++]
           tmpPlayer.turn = false;
@@ -342,37 +342,29 @@ socketio.on('connection', function (socket) {
           tmpPlayer.game_coin = MAX_GAME_COIN;
         }
 
-        if (i == tmpDealer.tableSeat) {
-          break;
-        }
+        if (i == tmpDealer.tableSeat) break;
 
         i++
         i = i % 10
       }
 
-      // set the turn
-      for (let i = (tmpDealer.tableSeat + 1) % 10, j = 0; ;) {
-        let tmpPlayer = room.players.find(elem => elem.tableSeat == i)
-        if (tmpPlayer) {
-          if (j == 0) {
-            tmpPlayer.total_bet = SMALL_BLIND;
-            tmpPlayer.bet = SMALL_BLIND;
+      let tmpPlayer = getNextSeatPlayer(room.players, tmpDealer);
+      if (tmpPlayer) {
+        tmpPlayer.total_bet = SMALL_BLIND;
+        tmpPlayer.bet = SMALL_BLIND;
+        tmpPlayer.game_coin -= tmpPlayer.total_bet
+      }
 
-            tmpPlayer.game_coin -= tmpPlayer.total_bet
-          } else if (j == 1) {
-            tmpPlayer.total_bet = 2 * SMALL_BLIND;
-            tmpPlayer.bet = 2 * SMALL_BLIND;
+      tmpPlayer = getNextSeatPlayer(room.players, tmpPlayer);
+      if (tmpPlayer) {
+        tmpPlayer.total_bet = 2 * SMALL_BLIND;
+        tmpPlayer.bet = 2 * SMALL_BLIND;
+        tmpPlayer.game_coin -= tmpPlayer.total_bet
+      }
 
-            tmpPlayer.game_coin -= tmpPlayer.total_bet
-          } else if (j == 2) { // set the turn
-            tmpPlayer.turn = true
-            break;
-          }
-          j++
-        }
-
-        i++
-        i = i % 10
+      tmpPlayer = getNextSeatPlayer(room.players, tmpPlayer);
+      if (tmpPlayer) {
+        tmpPlayer.turn = true
       }
 
       broadcastToRoom(player.roomId, '', 'start-table', {
@@ -397,7 +389,7 @@ socketio.on('connection', function (socket) {
 
     // check if can raise
     if (diff <= 0 || maxBettedPlayer.username == player.username) {
-      return;  
+      return;
     }
 
     if (diff > player.game_coin) { // validate the diff
@@ -411,21 +403,14 @@ socketio.on('connection', function (socket) {
     player.total_bet += diff
     player.turn = false;
 
-    // set the turn
-    for (let i = (player.tableSeat + 1) % 10; ;) {
-      let tmpPlayer = room.players.find(elem => elem.tableSeat == i && elem.username != player.username)
-      if (tmpPlayer) {
-        tmpPlayer.turn = true
+    let tmpPlayer = getNextSeatPlayer(room.players, player)
+    if (tmpPlayer) {
+      tmpPlayer.turn = true
 
-        broadcastToRoom(player.roomId, '', 'raise', {
-          player: player,
-          nextUsername: tmpPlayer.username
-        });
-        break;
-      }
-
-      i++
-      i = i % 10
+      broadcastToRoom(player.roomId, '', 'raise', {
+        player: player,
+        nextUsername: tmpPlayer.username
+      });
     }
   })
 
@@ -448,34 +433,40 @@ socketio.on('connection', function (socket) {
     player.status = 'checked'
     player.turn = false
 
-    // set the turn
-    for (let i = (player.tableSeat + 1) % 10; ;) {
-      let tmpPlayer = room.players.find(elem => elem.tableSeat == i && elem.username != player.username)
-      if (tmpPlayer) {
-        if ((tmpPlayer.status == 'checked' && tmpPlayer.bet == 0) || tmpPlayer.bet == maxBet) { // have to lay the new card
-          if (room.layedCards.length == 0) {
-            room.layedCards.push(cards[cards.length - 1])
-            room.layedCards.push(cards[cards.length - 2])
-            room.layedCards.push(cards[cards.length - 3])
-          } else {
-            room.layedCards.push(cards[cards.length - (room.layedCards.length + 1)])
-          }
-
-          broadcastToRoom(player.roomId, '', 'lay-card', {
-            cards: room.layedCards,
-          });
+    let tmpPlayer = getNextSeatPlayer(room.players, player)
+    if (tmpPlayer) {
+      if ((tmpPlayer.bet == maxBet && tmpPlayer.bet != 0) || 
+          (tmpPlayer.status == 'checked' && tmpPlayer.bet == 0)) { // have to lay the new card
+        if (room.layedCards.length == 0) {
+          room.layedCards.push(cards[cards.length - 1])
+          room.layedCards.push(cards[cards.length - 2])
+          room.layedCards.push(cards[cards.length - 3])
         } else {
-          tmpPlayer.turn = true;
+          room.layedCards.push(cards[cards.length - (room.layedCards.length + 1)])
+        }
 
-          broadcastToRoom(player.roomId, '', 'change-turn', {
-            nextUsername: tmpPlayer.username,
+        broadcastToRoom(player.roomId, '', 'lay-card', {
+          cards: room.layedCards,
+        });
+
+        // new round and clear the bet
+        room.players.forEach(elem => { elem.bet = 0; elem.status = 'playing'})
+        
+        tmpPlayer = getNextSeatPlayer(room.players, room.players.find(elem => elem.dealer))
+        if (tmpPlayer) {
+          tmpPlayer.turn = true
+          broadcastToRoom(player.roomId, '', 'new-round', {
+            players: room.players,
           });
         }
-        break;
+      } else {
+        console.log(tmpPlayer)
+        
+        tmpPlayer.turn = true;
+        broadcastToRoom(player.roomId, '', 'change-turn', {
+          nextUser: tmpPlayer,
+        });
       }
-
-      i++
-      i = i % 10
     }
 
     broadcastToRoom(player.roomId, '', 'check', {
@@ -740,4 +731,21 @@ let formatPlayerInfo = (player) => {
   player.turn = false
 
   player.scene = 'WaitScene'
+}
+
+let getNextSeatPlayer = (players, curPlayer) => {
+  for (let i = (curPlayer.tableSeat + 1) % 10; ;) {
+    let nextSeatPlayer = players.find(elem => elem.tableSeat == i)
+
+    if (nextSeatPlayer) {
+      return nextSeatPlayer;
+    }
+
+    if (i == curPlayer.tableSeat) {
+      return null;
+    }
+
+    i++
+    i = i % 10
+  }
 }
