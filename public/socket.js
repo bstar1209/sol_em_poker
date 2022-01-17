@@ -112,6 +112,18 @@ socket.on('raise', (data) => {
   currentScene.raise(data)
 })
 
+let sendCheck = (data) => {
+  socket.emit('check', data)
+}
+
+socket.on('check', (data) => {
+  currentScene.check(data)
+})
+
+socket.on('lay-card', (data) => {
+  currentScene.layCard(data)
+})
+
 let betMinionOrSpell = (username, card) => {
   socket.emit('bet-card', {
     username: username,
@@ -126,12 +138,6 @@ socket.on('bet-card', (data) => {
 socket.on('start-table', (data) => {
   currentScene.startTable(data.players)
 })
-
-let changeTurn = (username) => {
-  socket.emit('change-turn', {
-    username: username
-  })
-}
 
 socket.on('change-turn', (data) => {
   currentScene.operateTurn(data)

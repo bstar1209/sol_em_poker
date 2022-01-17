@@ -75,6 +75,8 @@ let shuffleDeck = () => {
     cards[i] = cards[j];
     cards[j] = tmp;
   }
+
+  console.log(cards)
 }
 
 let checkSignIn = (req, res, next) => {
@@ -221,7 +223,8 @@ socketio.on('connection', function (socket) {
     let room = {
       id: unqueRoomId,
       players: [],
-      status: 'waiting'
+      status: 'waiting',
+      layedCards: [],
     }
 
     player.tableSeat = Math.floor(Math.random() * 10); // set the table seat number
@@ -389,8 +392,15 @@ socketio.on('connection', function (socket) {
 
     let maxBettedPlayer = room.players.reduce((prev, current) => prev.bet > current.bet ? prev : current)
 
+    // calculate the diff
     let diff = maxBettedPlayer.bet - player.bet;
-    if (diff > player.game_coin) {
+
+    // check if can raise
+    if (diff <= 0 || maxBettedPlayer.username == player.username) {
+      return;  
+    }
+
+    if (diff > player.game_coin) { // validate the diff
       diff = player.game_coin
       player.game_coin = 0
     } else {
@@ -417,6 +427,60 @@ socketio.on('connection', function (socket) {
       i++
       i = i % 10
     }
+  })
+
+  socket.on('check', (data) => {
+    let player = getPlayer(data.username);
+    let room = getRoom(player.roomId);
+
+    if (!room) {
+      console.log('room is not exist')
+      return;
+    }
+
+    let maxBet = room.players.reduce((prev, current) => prev.bet > current.bet ? prev : current).bet
+
+    if (maxBet != player.bet) { // validate if can check
+      console.log(`${player.username} can not be able to check`)
+      return
+    }
+
+    player.status = 'checked'
+    player.turn = false
+
+    // set the turn
+    for (let i = (player.tableSeat + 1) % 10; ;) {
+      let tmpPlayer = room.players.find(elem => elem.tableSeat == i && elem.username != player.username)
+      if (tmpPlayer) {
+        if ((tmpPlayer.status == 'checked' && tmpPlayer.bet == 0) || tmpPlayer.bet == maxBet) { // have to lay the new card
+          if (room.layedCards.length == 0) {
+            room.layedCards.push(cards[cards.length - 1])
+            room.layedCards.push(cards[cards.length - 2])
+            room.layedCards.push(cards[cards.length - 3])
+          } else {
+            room.layedCards.push(cards[cards.length - (room.layedCards.length + 1)])
+          }
+
+          broadcastToRoom(player.roomId, '', 'lay-card', {
+            cards: room.layedCards,
+          });
+        } else {
+          tmpPlayer.turn = true;
+
+          broadcastToRoom(player.roomId, '', 'change-turn', {
+            nextUsername: tmpPlayer.username,
+          });
+        }
+        break;
+      }
+
+      i++
+      i = i % 10
+    }
+
+    broadcastToRoom(player.roomId, '', 'check', {
+      checkedUsername: player.username,
+    });
   })
 
   socket.on('bet-card', (data) => {

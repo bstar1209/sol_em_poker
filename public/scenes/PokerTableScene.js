@@ -39,7 +39,11 @@ var PokerTableScene = new Phaser.Class({
     this.pokerBoard = this.add.image(0, 0, 'poker_board').setOrigin(0).setScale(1)
 
     this.foldBtn = this.add.image(0, 400, 'fold').setOrigin(0).setScale(1)
-    this.checkBtn = this.add.image(150, 400, 'check').setOrigin(0).setScale(1)
+    this.checkBtn = this.add.image(150, 400, 'check').setOrigin(0).setScale(1).setInteractive().on('pointerup', (pointer) => {
+      sendCheck({
+        username:username,
+      })
+    })
     this.raiseBtn = this.add.image(150, 400, 'raise').setOrigin(0).setScale(1).setInteractive().on('pointerup', (pointer) => {
       sendRaise({
         username: username,
@@ -68,6 +72,9 @@ var PokerTableScene = new Phaser.Class({
 
     this.pokerTable = this.add.container(this.pokerBoard.width / 2, this.pokerBoard.height / 2 - 100)
     this.pokerTable.add(this.add.image(0, 0, 'poker_table').setOrigin(0.5, 0.5).setScale(1));
+
+    this.layedCardsGroup = this.add.container(-150, -50)
+    this.pokerTable.add(this.layedCardsGroup)
 
     this.seatPos = [
       [270, 170],
@@ -146,7 +153,7 @@ var PokerTableScene = new Phaser.Class({
     if (tmpPlayer.turn) {
       this.foldBtn.visible = true
       this.raiseBtn.visible = true
-      // this.checkBtn.visible = true
+      this.checkBtn.visible = false
 
       this.pluschipBtn.visible = true
     }
@@ -154,8 +161,6 @@ var PokerTableScene = new Phaser.Class({
   raise: function (data) {
     let tmpPlayer = curRoom.players.find(elem => elem.username == data.player.username);
 
-    console.log(data.player)
-    
     tmpPlayer.game_coin = data.player.game_coin
     tmpPlayer.total_bet = data.player.total_bet
     tmpPlayer.bet = data.player.bet
@@ -169,13 +174,21 @@ var PokerTableScene = new Phaser.Class({
     tmpNextPlayer.turn = true;
     tmpNextPlayer.group.list[2].setColor('#f00')
 
-    if (tmpNextPlayer.username == username) {
-      this.foldBtn.visible = true
-      this.raiseBtn.visible = true
-      this.checkBtn.visible = true
+    if (tmpNextPlayer.username == username) { // enable the order part
+      let maxBet = curRoom.players.reduce((prev, current) => prev.bet > current.bet ? prev : current).bet
+
+      if (maxBet == tmpNextPlayer.bet) {
+        this.checkBtn.visible = true
+        this.raiseBtn.visible = false
+        this.foldBtn.visible = false
+      } else {
+        this.foldBtn.visible = true
+        this.raiseBtn.visible = true
+        this.checkBtn.visible = false
+      }
       
       this.pluschipBtn.visible = true
-    } else {
+    } else { // disable te order part
       this.foldBtn.visible = false
       this.raiseBtn.visible = false
       this.checkBtn.visible = false
@@ -183,6 +196,39 @@ var PokerTableScene = new Phaser.Class({
       this.pluschipBtn.visible = false
     }
 
+  },
+  check: function (data) {
+    let tmpPlayer = curRoom.players.find(elem => elem.username == data.checkedUsername);
+
+    if (tmpPlayer.username == username) {
+      this.foldBtn.visible = false
+      this.raiseBtn.visible = false
+      this.checkBtn.visible = false
+
+      this.pluschipBtn.visible = false
+    }
+  },
+  operateTurn: function (data) {
+    let tmpPlayer = curRoom.players.find(elem => elem.username == data.nextUsername);
+
+    if (tmpPlayer.username == username) {
+      this.foldBtn.visible = false
+      this.raiseBtn.visible = false
+      this.checkBtn.visible = true
+
+      this.pluschipBtn.visible = true
+    }
+  },
+  layCard: function (data) {
+    console.log(curRoom)
+    console.log(data)
+
+    let diffArr =  data.cards.filter(e => !curRoom.layedCards.includes(e))
+    console.log(diffArr)
+
+    for (let i = 0; i < diffArr.length; i++) {
+      this.layedCardsGroup.add(this.add.image(60 * i + curRoom.layedCards.length, 0, diffArr[i]).setOrigin(0).setScale(0.1))
+    }
   },
   getCardName: function (card) {
     let suit = card.substring(0, 1);
@@ -219,5 +265,5 @@ var PokerTableScene = new Phaser.Class({
     }
 
     return rank;
-  }
+  },
 });
