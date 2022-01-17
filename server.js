@@ -5,7 +5,7 @@ import { createServer } from 'http';
 import session from 'express-session';
 import cookieParser from 'cookie-parser';
 
-import { MAX_ROOM_PLAYERS } from './config/index.js'
+import { MAX_ROOM_PLAYERS, MAX_GAME_COIN, SMALL_BLIND } from './config/index.js'
 
 const app = express();
 const server = createServer(app);
@@ -181,6 +181,9 @@ socketio.on('connection', function (socket) {
       scene: 'WaitScene',
       tableSeat: 0,
       handed: [],
+      game_coin: 0,
+      total_bet: 0,
+      bet: 0,
     }
 
     const index = playerList.findIndex((elem) => elem.username == data.username);
@@ -320,7 +323,7 @@ socketio.on('connection', function (socket) {
       room.status = 'playing'
 
       let tmpDealer = room.players[Math.floor(Math.random() * room.players.length)]
-      tmpDealer.turn = true;
+      tmpDealer.dealer = true;
 
       makeDeck()
       shuffleDeck()
@@ -332,6 +335,8 @@ socketio.on('connection', function (socket) {
           tmpPlayer.handed[0] = cards[j++]
           tmpPlayer.handed[1] = cards[j++]
           tmpPlayer.turn = false;
+          
+          tmpPlayer.game_coin = MAX_GAME_COIN;
         }
 
         if (i == tmpDealer.tableSeat) {
@@ -343,11 +348,23 @@ socketio.on('connection', function (socket) {
       }
 
       // set the turn
-      for (let i = (tmpDealer.tableSeat + 1) % 10; ;) {
+      for (let i = (tmpDealer.tableSeat + 1) % 10, j = 0; ;) {
         let tmpPlayer = room.players.find(elem => elem.tableSeat == i)
         if (tmpPlayer) {
-          tmpPlayer.turn = true
-          break;
+          if (j == 0) {
+            tmpPlayer.turn = true
+            tmpPlayer.total_bet = SMALL_BLIND;
+            tmpPlayer.bet = SMALL_BLIND;
+
+            tmpPlayer.game_coin -= tmpPlayer.total_bet
+          } else if (j == 1) {
+            tmpPlayer.total_bet = 2 * SMALL_BLIND;
+            tmpPlayer.bet = 2 * SMALL_BLIND;
+
+            tmpPlayer.game_coin -= tmpPlayer.total_bet
+            break;
+          }
+          j++
         }
 
         i++
