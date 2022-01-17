@@ -104,6 +104,14 @@ socket.on('ready', () => {
   currentScene.setReady()
 })
 
+let sendRaise = (data) => {
+  socket.emit('raise', data);
+}
+
+socket.on('raise', (data) => {
+  currentScene.raise(data)
+})
+
 let betMinionOrSpell = (username, card) => {
   socket.emit('bet-card', {
     username: username,

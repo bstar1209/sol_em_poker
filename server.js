@@ -335,7 +335,7 @@ socketio.on('connection', function (socket) {
           tmpPlayer.handed[0] = cards[j++]
           tmpPlayer.handed[1] = cards[j++]
           tmpPlayer.turn = false;
-          
+
           tmpPlayer.game_coin = MAX_GAME_COIN;
         }
 
@@ -352,7 +352,6 @@ socketio.on('connection', function (socket) {
         let tmpPlayer = room.players.find(elem => elem.tableSeat == i)
         if (tmpPlayer) {
           if (j == 0) {
-            tmpPlayer.turn = true
             tmpPlayer.total_bet = SMALL_BLIND;
             tmpPlayer.bet = SMALL_BLIND;
 
@@ -362,6 +361,8 @@ socketio.on('connection', function (socket) {
             tmpPlayer.bet = 2 * SMALL_BLIND;
 
             tmpPlayer.game_coin -= tmpPlayer.total_bet
+          } else if (j == 2) { // set the turn
+            tmpPlayer.turn = true
             break;
           }
           j++
@@ -374,6 +375,47 @@ socketio.on('connection', function (socket) {
       broadcastToRoom(player.roomId, '', 'start-table', {
         players: room.players
       })
+    }
+  })
+
+  socket.on('raise', (data) => {
+    let player = getPlayer(data.username);
+    let room = getRoom(player.roomId);
+
+    if (!room) {
+      console.log('room is not exist')
+      return;
+    }
+
+    let maxBettedPlayer = room.players.reduce((prev, current) => prev.bet > current.bet ? prev : current)
+
+    let diff = maxBettedPlayer.bet - player.bet;
+    if (diff > player.game_coin) {
+      diff = player.game_coin
+      player.game_coin = 0
+    } else {
+      player.game_coin -= diff
+    }
+
+    player.bet += diff;
+    player.total_bet += diff
+    player.turn = false;
+
+    // set the turn
+    for (let i = (player.tableSeat + 1) % 10; ;) {
+      let tmpPlayer = room.players.find(elem => elem.tableSeat == i && elem.username != player.username)
+      if (tmpPlayer) {
+        tmpPlayer.turn = true
+
+        broadcastToRoom(player.roomId, '', 'raise', {
+          player: player,
+          nextUsername: tmpPlayer.username
+        });
+        break;
+      }
+
+      i++
+      i = i % 10
     }
   })
 
