@@ -6,6 +6,7 @@ import session from 'express-session';
 import cookieParser from 'cookie-parser';
 
 import { MAX_ROOM_PLAYERS, MAX_GAME_COIN, SMALL_BLIND } from './config/index.js'
+import poker from './poker/index.js'
 
 const app = express();
 const server = createServer(app);
@@ -442,7 +443,8 @@ socketio.on('connection', function (socket) {
           room.layedCards.push(cards[cards.length - 2])
           room.layedCards.push(cards[cards.length - 3])
         } else if (room.layedCards.length == 5) { // for final result
-
+          console.log(room.players)
+          poker.getWinner(room.players, room.layedCards);
           return;
         } else {
           room.layedCards.push(cards[cards.length - (room.layedCards.length + 1)])
