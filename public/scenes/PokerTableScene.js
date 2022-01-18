@@ -123,19 +123,46 @@ var PokerTableScene = new Phaser.Class({
       [370, 0],
     ];
 
+    let curPlayer = curRoom.players.find(elem => elem.username == username)
+    if (curPlayer.ready) { // ready yet
+      this.readyBtn.visible = false
+    }
+
     for (let i = 0; i < curRoom.players.length; i++) {
-      curRoom.players[i].group = this.add.container(this.seatPos[curRoom.players[i].tableSeat][0], this.seatPos[curRoom.players[i].tableSeat][1])
-      curRoom.players[i].card = this.add.container(this.seatPos[curRoom.players[i].tableSeat][0], this.seatPos[curRoom.players[i].tableSeat][1])
+      let player = curRoom.players[i];
+      player.group = this.add.container(this.seatPos[player.tableSeat][0], this.seatPos[player.tableSeat][1])
+      player.card = this.add.container(this.seatPos[player.tableSeat][0], this.seatPos[player.tableSeat][1])
 
-      this.pokerTable.add(curRoom.players[i].group) // sit the player on the table
-      this.pokerTable.add(curRoom.players[i].card)
+      this.pokerTable.add(player.group) // sit the player on the table
+      this.pokerTable.add(player.card)
 
-      curRoom.players[i].group.add(this.add.image(0, 0, 'poker_user').setOrigin(0.5, 0.5).setScale(0.2)) // assign the avatar
-      curRoom.players[i].group.add(this.add.image(0, 0, 'dealer').setOrigin(0, 0.5).setScale(1)) // assign the dealer sign
-      curRoom.players[i].group.add(this.add.text(0, 0, `${curRoom.players[i].username}`, { font: "bold 28px Arial", fill: "#fff" }))
-      curRoom.players[i].group.add(this.add.text(0, 30, `Bet: $0 (0)\n$0`, { font: "20px Arial", fill: "#fff" }))
+      player.group.add(this.add.image(0, 0, 'poker_user').setOrigin(0.5, 0.5).setScale(0.2)) // assign the avatar
+      player.group.add(this.add.image(0, 0, 'dealer').setOrigin(0, 0.5).setScale(1)) // assign the dealer sign
+      player.group.add(this.add.text(0, 0, `${player.username}`, { font: "bold 28px Arial", fill: "#fff" }))
+      player.group.add(this.add.text(0, 30, `Bet: $0 (0)\n$0`, { font: "20px Arial", fill: "#fff" }))
 
-      curRoom.players[i].group.list[1].visible = false
+      if (!player.dealer) {
+        player.group.list[1].visible = false
+      }
+      if (player.username == username && player.ready && player.turn) { // enable the order part
+        let maxBet = curRoom.players.reduce((prev, current) => prev.bet > current.bet ? prev : current).bet
+  
+        if (maxBet == player.bet) {
+          this.checkBtn.visible = true
+          this.raiseBtn.visible = false
+          this.foldBtn.visible = false
+        } else {
+          this.foldBtn.visible = true
+          this.raiseBtn.visible = true
+          this.checkBtn.visible = false
+        }
+        
+        this.pluschipBtn.visible = true
+      }
+    }
+
+    for (let i = 0; i < curRoom.layedCards.length; i++) {
+      this.layedCardsGroup.add(this.add.image(60 * i, 0, curRoom.layedCards[i]).setOrigin(0).setScale(0.1))
     }
   },
   joinToRoom: function (player) {

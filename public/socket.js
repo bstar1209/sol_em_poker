@@ -24,11 +24,9 @@ socket.on('player-list', (data) => {
       case 'LoadingScene':
         currentScene.scene.start("LoadingScene");
         break;
-      case 'BattleScene':
-        armyProfile = data.room.players.find(elem => elem.username == username)
-        enemyProfile = data.room.players.find(elem => elem.username != username)
-
-        currentScene.scene.start("BattleScene");
+      case 'PokerTableScene':
+        curRoom = data.room;
+        currentScene.scene.start("PokerTableScene");
         break;
       default:
         break;

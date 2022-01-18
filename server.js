@@ -190,11 +190,9 @@ socketio.on('connection', function (socket) {
     }
 
     const index = playerList.findIndex((elem) => elem.username == data.username);
-
     if (index != -1) { // exist yet
       playerInfo = playerList[index]
       playerInfo.id = playerId
-
       playerList.splice(index, 1);
     }
     playerList.push(playerInfo);
