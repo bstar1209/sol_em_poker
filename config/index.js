@@ -14,7 +14,7 @@ export const DB_USERNAME=''
 export const DB_PASSWORD=''
 export const DB_NAME='sol_em_poker'
 
-export const MAX_ROOM_PLAYERS = 3
+export const MAX_ROOM_PLAYERS = 4
 export const SMALL_BLIND = 10
 
 export const MAX_GAME_COIN = 300

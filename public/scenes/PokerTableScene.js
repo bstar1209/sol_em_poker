@@ -144,6 +144,11 @@ var PokerTableScene = new Phaser.Class({
       if (!player.dealer) {
         player.group.list[1].visible = false
       }
+
+      if (player.status == 'folded') {
+        player.group.list[3].setText(`FOLDED (${player.total_bet})`)
+      }
+
       if (player.username == username && player.ready && player.turn) { // enable the order part
         let maxBet = curRoom.players.reduce((prev, current) => prev.bet > current.bet ? prev : current).bet
   
