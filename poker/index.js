@@ -65,7 +65,6 @@ let getWinner = (players, layedCards) => {
     winner = winnerHelper(players, tests[i])
     if (winner) {
       console.log(tests[i])
-      console.log(winner)
       break;
     }
   }

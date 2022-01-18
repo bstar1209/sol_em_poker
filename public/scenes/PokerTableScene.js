@@ -158,10 +158,6 @@ var PokerTableScene = new Phaser.Class({
     this.readyBtn.visible = false
   },
   startTable: function (players) {
-    let dealerName = players.find(elem => elem.dealer).username;
-    let tmpPlayer = curRoom.players.find(elem => elem.username == dealerName);
-    tmpPlayer.group.list[1].visible = true; // show the dealer sign
-
     for (let i = 0; i < players.length; i++) {
       let tmpPlayer = curRoom.players.find(elem => elem.username == players[i].username);
       tmpPlayer.handed = players[i].handed
@@ -171,15 +167,24 @@ var PokerTableScene = new Phaser.Class({
       tmpPlayer.total_bet = players[i].total_bet
       tmpPlayer.bet = players[i].bet
 
+      tmpPlayer.group.list[1].visible = false; // disable the dealer sign
+      tmpPlayer.group.list[2].setColor('#fff')
       tmpPlayer.group.list[3].setText(`Bet: $${tmpPlayer.bet} (${tmpPlayer.total_bet})\n$${tmpPlayer.game_coin}`)
 
       tmpPlayer.card.add(this.add.image(0, 70, tmpPlayer.handed[0]).setOrigin(0).setScale(0.1))
       tmpPlayer.card.add(this.add.image(50, 70, tmpPlayer.handed[1]).setOrigin(0).setScale(0.1))
     }
 
+    let dealerName = players.find(elem => elem.dealer).username;
+    let tmpPlayer = curRoom.players.find(elem => elem.username == dealerName);
+    tmpPlayer.group.list[1].visible = true; // show the dealer sign
+
     curRoom.players.find(elem => elem.turn).group.list[2].setColor('#f00')
 
     tmpPlayer = curRoom.players.find(elem => elem.username == username);
+
+    // clear the layed cards on the table
+    this.layedCardsGroup.removeAll();
 
     if (tmpPlayer.turn) {
       this.foldBtn.visible = true
@@ -187,6 +192,12 @@ var PokerTableScene = new Phaser.Class({
       this.checkBtn.visible = false
 
       this.pluschipBtn.visible = true
+    } else {
+      this.foldBtn.visible = false
+      this.raiseBtn.visible = false
+      this.checkBtn.visible = false
+
+      this.pluschipBtn.visible = false
     }
   },
   layCard: function (data) {

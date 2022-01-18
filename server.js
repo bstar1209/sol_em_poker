@@ -321,52 +321,14 @@ socketio.on('connection', function (socket) {
     }
 
     player.ready = true
+    player.game_coin = MAX_GAME_COIN;
     socket.emit('ready');
 
     if (room.players.filter(elem => elem.ready).length == MAX_ROOM_PLAYERS) { // all players are ready
       let tmpDealer = room.players[Math.floor(Math.random() * room.players.length)]
       tmpDealer.dealer = true;
 
-      makeDeck()
-      shuffleDeck()
-
-      // assign two cards into players
-      for (let i = (tmpDealer.tableSeat + 1) % 10, j = 0; ;) {
-        let tmpPlayer = room.players.find(elem => elem.tableSeat == i)
-        if (tmpPlayer) {
-          tmpPlayer.status = 'playing'
-
-          tmpPlayer.handed[0] = cards[j++]
-          tmpPlayer.handed[1] = cards[j++]
-          tmpPlayer.turn = false;
-
-          tmpPlayer.game_coin = MAX_GAME_COIN;
-        }
-
-        if (i == tmpDealer.tableSeat) break;
-
-        i++
-        i = i % 10
-      }
-
-      let tmpPlayer = getNextSeatPlayer(room.players, tmpDealer);
-      if (tmpPlayer) {
-        tmpPlayer.total_bet = SMALL_BLIND;
-        tmpPlayer.bet = SMALL_BLIND;
-        tmpPlayer.game_coin -= tmpPlayer.total_bet
-      }
-
-      tmpPlayer = getNextSeatPlayer(room.players, tmpPlayer);
-      if (tmpPlayer) {
-        tmpPlayer.total_bet = 2 * SMALL_BLIND;
-        tmpPlayer.bet = 2 * SMALL_BLIND;
-        tmpPlayer.game_coin -= tmpPlayer.total_bet
-      }
-
-      tmpPlayer = getNextSeatPlayer(room.players, tmpPlayer);
-      if (tmpPlayer) {
-        tmpPlayer.turn = true
-      }
+      startTable(room, tmpDealer)
 
       broadcastToRoom(player.roomId, '', 'start-table', {
         players: room.players
@@ -437,16 +399,39 @@ socketio.on('connection', function (socket) {
     let tmpPlayer = getNextSeatPlayer(room.players, player)
     if (tmpPlayer) { // next seat player
       if ((tmpPlayer.bet == maxBet && tmpPlayer.bet != 0) ||
-        (tmpPlayer.status == 'checked' && tmpPlayer.bet == 0)) { // have to lay the new card
+        (tmpPlayer.status == 'checked' && tmpPlayer.bet == 0)) { // have to lay the new 3 cards
         if (room.layedCards.length == 0) {
           room.layedCards.push(cards[cards.length - 1])
           room.layedCards.push(cards[cards.length - 2])
           room.layedCards.push(cards[cards.length - 3])
         } else if (room.layedCards.length == 5) { // for final result
-          console.log(room.players)
-          poker.getWinner(room.players, room.layedCards);
+          let winner = poker.getWinner(room.players, room.layedCards);
+          console.log(winner)
+          winner = room.players.find(elem => elem.username == winner.username)
+          for (let i = 0; i < room.players.length; i++) {
+            winner.game_coin += room.players[i].total_bet;
+            room.players[i].bet = 0
+            room.players[i].total_bet = 0
+            room.players[i].status = 'playing'
+
+            room.players[i].handed = []
+          }
+
+          let tmpDealer = room.players.find(elem => elem.dealer)
+          tmpDealer.dealer = false;
+
+          tmpDealer = getNextSeatPlayer(room.players, player)
+          tmpDealer.dealer = true;
+
+          initTable(room)
+          startTable(room, tmpDealer)
+
+          broadcastToRoom(player.roomId, '', 'start-table', {
+            players: room.players
+          })
+
           return;
-        } else {
+        } else { // have to lay the new one card
           room.layedCards.push(cards[cards.length - (room.layedCards.length + 1)])
         }
 
@@ -834,5 +819,50 @@ let getNextSeatPlayer = (players, curPlayer) => {
 
     i++
     i = i % 10
+  }
+}
+
+let initTable = (room) => {
+  room.layedCards = []
+}
+
+let startTable = (room, dealer) => {
+  makeDeck()
+  shuffleDeck()
+
+  // assign two cards into players
+  for (let i = (dealer.tableSeat + 1) % 10, j = 0; ;) {
+    let tmpPlayer = room.players.find(elem => elem.tableSeat == i)
+    if (tmpPlayer) {
+      tmpPlayer.status = 'playing'
+
+      tmpPlayer.handed[0] = cards[j++]
+      tmpPlayer.handed[1] = cards[j++]
+      tmpPlayer.turn = false;
+    }
+
+    if (i == dealer.tableSeat) break;
+
+    i++
+    i = i % 10
+  }
+
+  let tmpPlayer = getNextSeatPlayer(room.players, dealer);
+  if (tmpPlayer) {
+    tmpPlayer.total_bet = SMALL_BLIND;
+    tmpPlayer.bet = SMALL_BLIND;
+    tmpPlayer.game_coin -= tmpPlayer.total_bet
+  }
+
+  tmpPlayer = getNextSeatPlayer(room.players, tmpPlayer);
+  if (tmpPlayer) {
+    tmpPlayer.total_bet = 2 * SMALL_BLIND;
+    tmpPlayer.bet = 2 * SMALL_BLIND;
+    tmpPlayer.game_coin -= tmpPlayer.total_bet
+  }
+
+  tmpPlayer = getNextSeatPlayer(room.players, tmpPlayer);
+  if (tmpPlayer) {
+    tmpPlayer.turn = true
   }
 }
