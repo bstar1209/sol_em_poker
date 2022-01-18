@@ -435,12 +435,15 @@ socketio.on('connection', function (socket) {
 
     let tmpPlayer = getNextSeatPlayer(room.players, player)
     if (tmpPlayer) { // next seat player
-      if ((tmpPlayer.bet == maxBet && tmpPlayer.bet != 0) || 
-          (tmpPlayer.status == 'checked' && tmpPlayer.bet == 0)) { // have to lay the new card
+      if ((tmpPlayer.bet == maxBet && tmpPlayer.bet != 0) ||
+        (tmpPlayer.status == 'checked' && tmpPlayer.bet == 0)) { // have to lay the new card
         if (room.layedCards.length == 0) {
           room.layedCards.push(cards[cards.length - 1])
           room.layedCards.push(cards[cards.length - 2])
           room.layedCards.push(cards[cards.length - 3])
+        } else if (room.layedCards.length == 5) { // for final result
+
+          return;
         } else {
           room.layedCards.push(cards[cards.length - (room.layedCards.length + 1)])
         }
@@ -450,11 +453,11 @@ socketio.on('connection', function (socket) {
         });
 
         // new round and clear the bet
-        room.players.forEach(elem => { 
-          elem.bet = 0; 
-          elem.status != 'folded' ? elem.status = 'playing' : elem.status = 'folded' 
+        room.players.forEach(elem => {
+          elem.bet = 0;
+          elem.status != 'folded' ? elem.status = 'playing' : elem.status = 'folded'
         })
-        
+
         tmpPlayer = getNextSeatPlayer(room.players, room.players.find(elem => elem.dealer))
         if (tmpPlayer) {
           tmpPlayer.turn = true
