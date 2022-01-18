@@ -434,7 +434,7 @@ socketio.on('connection', function (socket) {
     player.turn = false
 
     let tmpPlayer = getNextSeatPlayer(room.players, player)
-    if (tmpPlayer) {
+    if (tmpPlayer) { // next seat player
       if ((tmpPlayer.bet == maxBet && tmpPlayer.bet != 0) || 
           (tmpPlayer.status == 'checked' && tmpPlayer.bet == 0)) { // have to lay the new card
         if (room.layedCards.length == 0) {
@@ -450,7 +450,10 @@ socketio.on('connection', function (socket) {
         });
 
         // new round and clear the bet
-        room.players.forEach(elem => { elem.bet = 0; elem.status = 'playing'})
+        room.players.forEach(elem => { 
+          elem.bet = 0; 
+          elem.status != 'folded' ? elem.status = 'playing' : elem.status = 'folded' 
+        })
         
         tmpPlayer = getNextSeatPlayer(room.players, room.players.find(elem => elem.dealer))
         if (tmpPlayer) {
@@ -459,19 +462,98 @@ socketio.on('connection', function (socket) {
             players: room.players,
           });
         }
-      } else {
-        console.log(tmpPlayer)
-        
-        tmpPlayer.turn = true;
-        broadcastToRoom(player.roomId, '', 'change-turn', {
-          nextUser: tmpPlayer,
-        });
+
+        return;
       }
+
+      broadcastToRoom(player.roomId, '', 'check', {
+        player: player,
+        nextUsername: tmpPlayer.username,
+      });
+    }
+  })
+
+  socket.on('plus-call', (data) => {
+    let player = getPlayer(data.username);
+    let room = getRoom(player.roomId);
+
+    if (!room) {
+      console.log('room is not exist')
+      return;
     }
 
-    broadcastToRoom(player.roomId, '', 'check', {
-      checkedUsername: player.username,
-    });
+    let maxBettedPlayer = room.players.reduce((prev, current) => prev.bet > current.bet ? prev : current)
+
+    // calculate the diff
+    let diff = maxBettedPlayer.bet - player.bet;
+
+    switch (data.amount) {
+      case '5':
+        diff += 5;
+        break;
+      case '10':
+        diff += 10;
+        break;
+      case '20':
+        diff += 20;
+        break;
+      case '50':
+        diff += 50;
+        break;
+      case '100':
+        diff += 100;
+        break;
+      case 'all_in':
+        diff += player.game_coin
+        break;
+    }
+
+    // check if can raise
+    if (diff <= 0) {
+      return;
+    }
+
+    if (diff > player.game_coin) { // validate the diff
+      diff = player.game_coin
+      player.game_coin = 0
+    } else {
+      player.game_coin -= diff
+    }
+
+    player.bet += diff;
+    player.total_bet += diff
+    player.turn = false;
+
+    let tmpPlayer = getNextSeatPlayer(room.players, player)
+    if (tmpPlayer) {
+      tmpPlayer.turn = true
+
+      broadcastToRoom(player.roomId, '', 'raise', {
+        player: player,
+        nextUsername: tmpPlayer.username
+      });
+    }
+  })
+
+  socket.on('fold', data => {
+    let player = getPlayer(data.username);
+    let room = getRoom(player.roomId);
+
+    if (!room) {
+      console.log('room is not exist')
+      return;
+    }
+
+    player.status = 'folded'
+    player.turn = false
+
+    let tmpPlayer = getNextSeatPlayer(room.players, player)
+    if (tmpPlayer) {
+      broadcastToRoom(player.roomId, '', 'fold', {
+        player: player,
+        nextUsername: tmpPlayer.username,
+      });
+    }
   })
 
   socket.on('bet-card', (data) => {
@@ -735,7 +817,7 @@ let formatPlayerInfo = (player) => {
 
 let getNextSeatPlayer = (players, curPlayer) => {
   for (let i = (curPlayer.tableSeat + 1) % 10; ;) {
-    let nextSeatPlayer = players.find(elem => elem.tableSeat == i)
+    let nextSeatPlayer = players.find(elem => elem.tableSeat == i && elem.status != 'folded')
 
     if (nextSeatPlayer) {
       return nextSeatPlayer;

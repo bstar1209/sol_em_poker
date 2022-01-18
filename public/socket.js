@@ -112,6 +112,10 @@ socket.on('raise', (data) => {
   currentScene.raise(data)
 })
 
+let sendPlusCall = (data) => {
+  socket.emit('plus-call', data)
+}
+
 let sendCheck = (data) => {
   socket.emit('check', data)
 }
@@ -122,6 +126,14 @@ socket.on('check', (data) => {
 
 socket.on('lay-card', (data) => {
   currentScene.layCard(data)
+})
+
+let sendFold = (data) => {
+  socket.emit('fold', data)
+}
+
+socket.on('fold', (data) => {
+  currentScene.fold(data)
 })
 
 let betMinionOrSpell = (username, card) => {
