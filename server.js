@@ -242,18 +242,17 @@ socketio.on('connection', function (socket) {
 
   socket.on('join-room', (data) => {
     let player = getPlayer(data.username);
-    let room = getRoom(data.roomId)
-
     if (!player) {
       console.log('is not exist');
       return;
     }
-
+    
     if (player.roomId != 0) {
       console.log(`${player.username} has already room`);
       return;
     }
 
+    let room = getRoom(data.roomId)
     if (!room) {
       console.log('room does not exist');
       return;
@@ -261,6 +260,11 @@ socketio.on('connection', function (socket) {
 
     if (room.players.length >= MAX_ROOM_PLAYERS) {
       console.log('players are limited')
+      return;
+    }
+
+    if (room.status == ROOM_STATUS.PLAYING) {
+      console.log('Room is playing')
       return;
     }
 
@@ -290,28 +294,38 @@ socketio.on('connection', function (socket) {
 
   socket.on('leave-room', (data) => {
     let player = getPlayer(data.username);
-    let room = getRoom(player.roomId);
-
     if (!player) {
       console.log('is not exist');
       return;
     }
-
+    
+    let room = getRoom(player.roomId);
     if (!room) {
       console.log('room does not exist');
       return;
     }
 
-    broadcastToRoom(player.roomId, 'leave-room', {
+    if (room.status == ROOM_STATUS.PLAYING) {
+      console.log('cannot leave room while playing now.')
+      return
+    }
+
+    broadcastToRoom(player.roomId, '', 'leave-room', {
       username: player.username,
     })
 
     player.roomId = 0
-
     player.scene = 'WaitScene'
 
     room.players = room.players.filter(elem => elem.username != data.username)
-    roomList = roomList.filter(elem => elem.players.length != 0)
+
+    if (room.players.length == 0) { // remove room
+      roomList = roomList.filter(elem => elem.players.length != 0)
+
+      broadcastToPlayer('', 'remove-room', {
+        rooms: roomList,
+      })
+    }
   })
 
   socket.on('select-hero', (data) => {
@@ -321,8 +335,12 @@ socketio.on('connection', function (socket) {
 
   socket.on('ready', (data) => {
     let player = getPlayer(data.username);
-    let room = getRoom(player.roomId);
+    if (!player) {
+      console.log('is not exist');
+      return;
+    }
 
+    let room = getRoom(player.roomId);
     if (!room) {
       console.log('room is not exist')
       return;
@@ -455,6 +473,8 @@ socketio.on('connection', function (socket) {
           room.players = room.players.filter(e => e.status != PLAYER_STATUS.BUSTED)
 
           if (room.players.length == 1) { // end the game
+            room.status = ROOM_STATUS.IDLE
+
             winner.ready = false
             winner.turn = false
             winner.game_coin = 0
@@ -463,7 +483,6 @@ socketio.on('connection', function (socket) {
             winner.status = PLAYER_STATUS.IDLE
             winner.dealer = false
 
-            // ........................................
             broadcastToRoom(room.id, '', 'end-table', {
               player: winner,
             })

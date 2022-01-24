@@ -44,7 +44,7 @@ socket.on('create-room', (data) => {
     case "WaitScene":
       if (data.username == username) { // you create the room
         curRoom = data.room;
-        currentScene.scene.start("PokerTableScene");      
+        currentScene.scene.start("PokerTableScene");
       } else {
         currentScene.redrawAllRooms({
           rooms: data.rooms
@@ -83,6 +83,18 @@ let sendLeaveRoom = (username) => {
 
 socket.on('leave-room', (data) => {
   currentScene.removePlayer(data)
+})
+
+socket.on('remove-room', (data) => {
+  switch (currentScene.scene.key) {
+    case "WaitScene":
+      currentScene.redrawAllRooms({
+        rooms: data.rooms
+      })
+      break;
+    default:
+      break;
+  }
 })
 
 let selectHero = (username, hero) => {

@@ -11,6 +11,7 @@ var PokerTableScene = new Phaser.Class({
     this.load.image('poker_user', 'images/poker_user.png'); // table image for the scene
 
     this.load.image('ready', 'images/ready.png');
+    this.load.image('leave_room', 'images/leave_room.png')
     this.load.image('dealer', 'images/dealer.png')
 
     this.load.image('check', 'images/check.png')
@@ -101,8 +102,11 @@ var PokerTableScene = new Phaser.Class({
     this.readyBtn = this.add.image(0, 0, 'ready').setOrigin(0).setScale(1).setInteractive().on('pointerup', (pointer) => {
       this.betSol(0.01)
     });
-
     this.readyBtn.visible = false
+
+    this.leaveRoomBtn = this.add.image(145, 0, 'leave_room').setOrigin(0).setScale(1).setInteractive().on('pointerup', (pointer) => {
+      sendLeaveRoom(username)
+    })
 
     this.pokerTable = this.add.container(this.pokerBoard.width / 2, this.pokerBoard.height / 2 - 100)
     this.pokerTable.add(this.add.image(0, 0, 'poker_table').setOrigin(0.5, 0.5).setScale(1));
@@ -122,11 +126,6 @@ var PokerTableScene = new Phaser.Class({
       [270, -200],
       [370, 0],
     ];
-
-    let curPlayer = curRoom.players.find(elem => elem.username == username)
-    if (curPlayer.ready) { // ready yet
-      this.readyBtn.visible = false
-    }
 
     // load the players
     for (let i = 0; i < curRoom.players.length; i++) {
@@ -172,8 +171,13 @@ var PokerTableScene = new Phaser.Class({
       this.layedCardsGroup.add(this.add.image(60 * i, 0, curRoom.layedCards[i]).setOrigin(0).setScale(0.1))
     }
 
-    if (curRoom.players.length == 3) {
+    if (curRoom.players.length == 3 && curRoom.status != 'playing') {
       this.readyBtn.visible = true
+    }
+
+    let curPlayer = curRoom.players.find(elem => elem.username == username)
+    if (curPlayer.ready) { // ready yet
+      this.readyBtn.visible = false
     }
   },
   joinToRoom: function (player) {
@@ -192,8 +196,13 @@ var PokerTableScene = new Phaser.Class({
 
     tmpPlayer.group.list[1].visible = false
 
-    if (curRoom.players.length == 3) {
+    if (curRoom.players.length == 3 && curRoom.status != 'playing') {
       this.readyBtn.visible = true
+    }
+
+    let curPlayer = curRoom.players.find(elem => elem.username == username)
+    if (curPlayer.ready) { // ready yet
+      this.readyBtn.visible = false
     }
   },
   removePlayer: function (data) {
@@ -206,6 +215,8 @@ var PokerTableScene = new Phaser.Class({
       curRoom.players[index].card.removeAll();
 
       curRoom.players.splice(index, 1);
+
+      this.readyBtn.visible = false
     }
   },
   betSol: function (amount) {
@@ -247,7 +258,7 @@ var PokerTableScene = new Phaser.Class({
             // Confirm whether the transaction went through or not
             await connection.confirmTransaction(signature);
 
-            //Signature or the txn hash
+            // Signature or the txn hash
             console.log("Signature: ", signature);
 
             sendReady({
@@ -257,7 +268,7 @@ var PokerTableScene = new Phaser.Class({
           }).catch((err) => {
             console.log(err)
           })
-        }).catch((err) => {
+        }).catch((err) => { // reject the request or etc
           console.log(err)
         });
       },
