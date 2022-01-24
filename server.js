@@ -5,7 +5,15 @@ import { createServer } from 'http';
 import session from 'express-session';
 import cookieParser from 'cookie-parser';
 
-import { MAX_ROOM_PLAYERS, MAX_GAME_COIN, SMALL_BLIND, CLUSTERS } from './config/index.js'
+import {
+  CLUSTERS,
+  ROOM_STATUS,
+  PLAYER_STATUS,
+  MAX_ROOM_PLAYERS,
+  MAX_GAME_COIN,
+  SMALL_BLIND,
+} from './config/index.js'
+
 import poker from './poker/index.js'
 
 const app = express();
@@ -213,7 +221,7 @@ socketio.on('connection', function (socket) {
     let room = {
       id: unqueRoomId,
       players: [],
-      status: 'waiting',
+      status: ROOM_STATUS.IDLE,
       layedCards: [],
     }
 
@@ -263,6 +271,7 @@ socketio.on('connection', function (socket) {
     while (room.players.find(elem => elem.tableSeat == randomSeat)) {
       randomSeat = Math.floor(Math.random() * 10);
     }
+
     player.tableSeat = randomSeat; // set the table seat number
     room.players.push(player);
 
@@ -388,18 +397,18 @@ socketio.on('connection', function (socket) {
 
     let maxBet = room.players.reduce((prev, current) => prev.bet > current.bet ? prev : current).bet
 
-    if (maxBet != player.bet) { // validate if can check
+    if (maxBet != player.bet && player.game_coin != 0) { // validate if can check
       console.log(`${player.username} can not be able to check`)
       return
     }
 
-    player.status = 'checked'
+    player.status = PLAYER_STATUS.CHECKED
     player.turn = false
 
-    let tmpPlayer = getNextSeatPlayer(room.players, player)
-    if (tmpPlayer) { // next seat player
-      if ((tmpPlayer.bet == maxBet && tmpPlayer.bet != 0) ||
-        (tmpPlayer.status == 'checked' && tmpPlayer.bet == 0)) { // have to lay the new 3 cards
+    let nextPlayer = getNextSeatPlayer(room.players, player)
+    if (nextPlayer) { // next seat player
+      if ((nextPlayer.bet == maxBet && nextPlayer.bet != 0) ||
+        (nextPlayer.status == PLAYER_STATUS.CHECKED && nextPlayer.bet == 0)) { // have to lay the new 3 cards
         if (room.layedCards.length == 0) {
           room.layedCards.push(cards[cards.length - 1])
           room.layedCards.push(cards[cards.length - 2])
@@ -413,7 +422,7 @@ socketio.on('connection', function (socket) {
             winner.game_coin += room.players[i].total_bet;
             room.players[i].bet = 0
             room.players[i].total_bet = 0
-            room.players[i].status = 'playing'
+            room.players[i].status = PLAYER_STATUS.PLAYING
 
             room.players[i].handed = []
           }
@@ -431,14 +440,7 @@ socketio.on('connection', function (socket) {
 
             elem.roomId = 0
             elem.scene = 'WaitScene'
-
-            room.players = room.players.filter(e => e.username != elem.username)
-            roomList = roomList.filter(e => e.players.length != 0)
-          }
-
-          if (bustingPlayers.length > 0) { // end the game
-            // ........................................
-            return;
+            elem.status = PLAYER_STATUS.BUSTED
           }
 
           // remove the old dealer
@@ -449,10 +451,29 @@ socketio.on('connection', function (socket) {
           tmpDealer = getNextSeatPlayer(room.players, player)
           tmpDealer.dealer = true;
 
+          // remove the busted players
+          room.players = room.players.filter(e => e.status != PLAYER_STATUS.BUSTED)
+
+          if (room.players.length == 1) { // end the game
+            winner.ready = false
+            winner.turn = false
+            winner.game_coin = 0
+            winner.total_bet = 0
+            winner.bet = 0
+            winner.status = PLAYER_STATUS.IDLE
+            winner.dealer = false
+
+            // ........................................
+            broadcastToRoom(room.id, '', 'end-table', {
+              player: winner,
+            })
+            return;
+          }
+
           // start new table
           startTable(room, tmpDealer)
 
-          broadcastToRoom(player.roomId, '', 'start-table', {
+          broadcastToRoom(room.id, '', 'start-table', {
             players: room.players,
           })
 
@@ -468,12 +489,12 @@ socketio.on('connection', function (socket) {
         // new round and clear the bet
         room.players.forEach(elem => {
           elem.bet = 0;
-          elem.status != 'folded' ? elem.status = 'playing' : elem.status = 'folded'
+          elem.status != PLAYER_STATUS.FOLDED ? elem.status = PLAYER_STATUS.PLAYING : elem.status = PLAYER_STATUS.FOLDED
         })
 
-        tmpPlayer = getNextSeatPlayer(room.players, room.players.find(elem => elem.dealer))
-        if (tmpPlayer) {
-          tmpPlayer.turn = true
+        nextPlayer = getNextSeatPlayer(room.players, room.players.find(elem => elem.dealer))
+        if (nextPlayer) {
+          nextPlayer.turn = true
           broadcastToRoom(player.roomId, '', 'new-round', {
             players: room.players,
           });
@@ -484,7 +505,7 @@ socketio.on('connection', function (socket) {
 
       broadcastToRoom(player.roomId, '', 'check', {
         player: player,
-        nextUsername: tmpPlayer.username,
+        nextUsername: nextPlayer.username,
       });
     }
   })
@@ -560,7 +581,7 @@ socketio.on('connection', function (socket) {
       return;
     }
 
-    player.status = 'folded'
+    player.status = PLAYER_STATUS.FOLDED
     player.turn = false
 
     let tmpPlayer = getNextSeatPlayer(room.players, player)
@@ -625,154 +646,6 @@ socketio.on('connection', function (socket) {
 
     refreshCards(player, enemy)
   })
-
-  socket.on('change-turn', (data) => {
-    let player = getPlayer(data.username);
-    let room = getRoom(player.roomId);
-
-    if (!room) {
-      console.log('room does not exist')
-      return
-    }
-
-
-    if (!player.turn) {
-      return;
-    }
-
-    player.turn = false;
-
-    let enemy = room.players.find(elem => elem.username != data.username)
-
-    enemy.turn = true;
-    if (enemy.hero.manabar < 10) {
-      enemy.hero.manabar++;
-    }
-    enemy.hero.mana = enemy.hero.manabar
-    enemy.sortedCards.filter((elem) => {
-      if (elem.bet) {
-        elem.disabled = false;
-        return true
-      }
-    })
-
-    player.sortedCards.filter((elem) => {
-      if (elem.bet) {
-        if (elem.freeze) {
-          elem.freeze--;
-          if (elem.freeze < 0) {
-            elem.freeze = 0
-          }
-        } else {
-          elem.freeze = 0;
-        }
-
-        if (elem.sleep) {
-          elem.sleep--;
-          if (elem.sleep < 0) {
-            elem.sleep = 0
-          }
-        } else {
-          elem.sleep = 0;
-        }
-
-        return true
-      }
-    })
-
-    Minions.repeatMagic(enemy, player)
-
-    enemy.sortedCards.find(elem => {
-      if (!elem.handed) {
-        if (enemy.sortedCards.filter(e => !e.bet && e.handed).length >= 10) {
-          elem.hp = 0
-        } else {
-          elem.handed = true
-        }
-        return true;
-      }
-    })
-
-    Minions.dieMagic(player, enemy)
-    Minions.dieMagic(enemy, player)
-
-    broadcastToRoom(player.roomId, 'change-turn', {
-      username: player.username,
-      room: room,
-    })
-
-    refreshCards(player, enemy)
-  })
-
-  socket.on('attack-hero', (data) => {
-    let player = getPlayer(data.username);
-    let room = getRoom(player.roomId);
-
-    if (!player.turn) {
-      return;
-    }
-
-    let enemy = room.players.find(elem => elem.username != data.username)
-    let card = player.sortedCards.find((elem) => elem.name == data.card)
-
-    if (card.disabled) {
-      console.log("Disabled card yet")
-      return;
-    }
-
-    card.disabled = true;
-    if (card.type == 'minion') {
-      enemy.hero.hp -= card.att;
-    } else if (card.type == 'spell') {
-    }
-
-    broadcastToRoom(player.roomId, 'attack-hero', {
-      username: player.username,
-      card: card,
-      from: player,
-      to: enemy,
-    })
-
-    if (enemy.hero.hp <= 0) {
-      broadcastToRoom(player.roomId, 'end-battle', {
-        loser: enemy.username,
-      })
-
-      formatPlayerInfo(player)
-      formatPlayerInfo(enemy)
-
-      room.status = 'end'
-      roomList = roomList.filter((elem) => elem.status != 'end')
-    }
-  })
-
-  socket.on('attack-minion', (data) => {
-    let player = getPlayer(data.username);
-    let room = getRoom(player.roomId);
-
-    if (!player.turn) {
-      return;
-    }
-
-    let from = player.sortedCards.find((elem) => elem.name == data.from)
-    let enemy = room.players.find(elem => elem.username != data.username)
-    let to = enemy.sortedCards.find((elem) => elem.name == data.to)
-
-    if (!Minions.guideMagic(player, enemy, from, to)) {
-      console.log(`${from.name} can not attack ${to.name}`)
-      return;
-    }
-
-    Minions.dieMagic(player, enemy)
-    Minions.dieMagic(enemy, player)
-
-    broadcastToRoom(player.roomId, 'attack-minion', {
-      username: player.username,
-      room: room
-    })
-
-    refreshCards(player, enemy)
-  })
 });
 
 server.listen(process.env.PORT, function () {
@@ -789,8 +662,9 @@ let getRoom = (roomId) => {
   return room;
 }
 
-let broadcastToRoom = (roomId, playerId, command, data) => { // playerId: expected id
+let broadcastToRoom = (roomId, playerId, command, data) => { // playerId: expected
   let room = getRoom(roomId);
+
   for (let i = 0; i < room.players.length; i++) {
     const elem = room.players[i];
     if (elem.id != playerId && socketio.sockets.sockets.get(elem.id)) {
@@ -814,26 +688,9 @@ let refreshCards = (army, enemy) => {
   enemy.sortedCards = enemy.sortedCards.filter((elem) => elem.hp > 0);
 }
 
-let formatPlayerInfo = (player) => {
-  player.roomId = 0
-
-  player.hero.hp = 30
-  player.hero.manabar = 0
-  player.hero.mana = 0
-
-  player.minions = []
-  player.spells = []
-  player.sortedCards = []
-
-  player.ready = false
-  player.turn = false
-
-  player.scene = 'WaitScene'
-}
-
 let getNextSeatPlayer = (players, curPlayer) => {
   for (let i = (curPlayer.tableSeat + 1) % 10; ;) {
-    let nextSeatPlayer = players.find(elem => elem.tableSeat == i && elem.status != 'folded')
+    let nextSeatPlayer = players.find(elem => elem.tableSeat == i && elem.status != PLAYER_STATUS.FOLDED && elem.status != PLAYER_STATUS.BUSTED)
 
     if (nextSeatPlayer) {
       return nextSeatPlayer;
@@ -853,6 +710,8 @@ let initTable = (room) => {
 }
 
 let startTable = (room, dealer) => {
+  room.status = ROOM_STATUS.PLAYING
+
   makeDeck()
   shuffleDeck()
 
@@ -860,7 +719,7 @@ let startTable = (room, dealer) => {
   for (let i = (dealer.tableSeat + 1) % 10, j = 0; ;) {
     let tmpPlayer = room.players.find(elem => elem.tableSeat == i)
     if (tmpPlayer) {
-      tmpPlayer.status = 'playing'
+      tmpPlayer.status = PLAYER_STATUS.PLAYING
 
       tmpPlayer.handed[0] = cards[j++]
       tmpPlayer.handed[1] = cards[j++]

@@ -99,7 +99,7 @@ var PokerTableScene = new Phaser.Class({
     this.pluschipBtn.visible = false
 
     this.readyBtn = this.add.image(0, 0, 'ready').setOrigin(0).setScale(1).setInteractive().on('pointerup', (pointer) => {
-      this.betSol(0.1)
+      this.betSol(0.01)
     });
 
     this.readyBtn.visible = false
@@ -197,12 +197,15 @@ var PokerTableScene = new Phaser.Class({
     }
   },
   removePlayer: function (data) {
-    console.log(data, username)
-    
     if (data.username == username) {
       currentScene.scene.start("WaitScene");
     } else {
-      // let tmpPlayer = curRoom.players.find(elem => elem.username == data.username);
+      let index = curRoom.players.findIndex(elem => elem.username == data.username);
+
+      curRoom.players[index].group.removeAll();
+      curRoom.players[index].card.removeAll();
+
+      curRoom.players.splice(index, 1);
     }
   },
   betSol: function (amount) {
@@ -355,13 +358,13 @@ var PokerTableScene = new Phaser.Class({
   },
   check: function (data) {
     let tmpPlayer = curRoom.players.find(elem => elem.username == data.player.username);
-    let tmpNextPlayer = curRoom.players.find(elem => elem.username == data.nextUsername);
+    let nextPlayer = curRoom.players.find(elem => elem.username == data.nextUsername);
 
     tmpPlayer.group.list[2].setColor('#fff')
 
-    tmpNextPlayer.group.list[2].setColor('#f00')
+    nextPlayer.group.list[2].setColor('#f00')
 
-    if (tmpNextPlayer.username == username) {
+    if (nextPlayer.username == username) {
       this.foldBtn.visible = false
       this.raiseBtn.visible = false
       this.checkBtn.visible = true
@@ -436,6 +439,31 @@ var PokerTableScene = new Phaser.Class({
       this.checkBtn.visible = false
 
       this.pluschipBtn.visible = false
+    }
+  },
+  endTable: function (data) {
+    console.log(data)
+
+    if (username == data.player.username) {
+      let tmpPlayer = curRoom.players.find(elem => elem.username == username);
+
+      tmpPlayer.card.removeAll();
+      tmpPlayer.game_coin = 0
+      tmpPlayer.total_bet = 0
+      tmpPlayer.bet = 0
+
+      tmpPlayer.group.list[1].visible = false
+      tmpPlayer.group.list[2].setColor('#fff')
+      tmpPlayer.group.list[3].setText(`Bet: $${tmpPlayer.bet} (${tmpPlayer.total_bet})\n$${tmpPlayer.game_coin}`)
+
+      // disable all operation button
+      this.foldBtn.visible = false
+      this.raiseBtn.visible = false
+      this.checkBtn.visible = false
+
+      this.pluschipBtn.visible = false
+
+      this.layedCardsGroup.removeAll()
     }
   },
   getCardName: function (card) {

@@ -4,6 +4,19 @@ export const CLUSTERS = {
   DEVNET: 'devnet',
 };
 
+export const ROOM_STATUS = {
+  IDLE: 'idle',
+  PLAYING: 'playing',
+}
+
+export const PLAYER_STATUS = {
+  IDLE: 'idle',
+  PLAYING: 'playing',
+  CHECKED: 'checked',
+  FOLDED: 'folded',
+  BUSTED: 'busted',
+}
+
 export const CANDY_MACHINE_ID = 'Adn5LxhaZvKiUdNxsDd9ZtPwaiWfxD9KdLoU2zR1J7qA'
 
 export const ANCHOR_URL = "https://solana-api.projectserum.com"

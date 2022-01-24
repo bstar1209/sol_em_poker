@@ -182,6 +182,6 @@ socket.on('dead-card', (data) => {
   currentScene.deadCard(data)
 })
 
-socket.on('end-battle', (data) => {
-  currentScene.endBattle(data)
+socket.on('end-table', (data) => {
+  currentScene.endTable(data)
 })
