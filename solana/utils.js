@@ -1,6 +1,6 @@
 import Base58 from 'bs58'
 import * as anchor from "@project-serum/anchor";
-import { Connection, PublicKey, clusterApiUrl } from '@solana/web3.js';
+import { Connection, PublicKey, clusterApiUrl, Keypair } from '@solana/web3.js';
 import splToken from '@solana/spl-token'
 import { deserializeUnchecked } from 'borsh';
 import fetch from "node-fetch";
@@ -342,12 +342,17 @@ const getTokensByOwner = async (address) => {
   return response.value;
 }
 
+const getOwnerWallet = async (privateKey) => {
+  return Keypair.fromSecretKey(new Uint8Array(await string2Uint8Array(privateKey)));
+}
+
 export default {
   string2Uint8Array,
-  Uint8Array2String,
+  Uint8Array2String,  
   getMints,
   getMeta,
   getTokenHolder,
   getMetadataKey,
   getTokensByOwner,
+  getOwnerWallet,
 }

@@ -5,7 +5,7 @@ import { createServer } from 'http';
 import session from 'express-session';
 import cookieParser from 'cookie-parser';
 
-import { MAX_ROOM_PLAYERS, MAX_GAME_COIN, SMALL_BLIND } from './config/index.js'
+import { MAX_ROOM_PLAYERS, MAX_GAME_COIN, SMALL_BLIND, OWNER_WALLET_ADDRESS, CLUSTERS } from './config/index.js'
 import poker from './poker/index.js'
 
 const app = express();
@@ -19,6 +19,7 @@ import path from 'path';
 import bodyParser from 'body-parser'
 
 import Utils from './solana/utils.js'
+// import solanaContract from './solana/contract.js'
 
 import ejs from 'ejs'
 
@@ -99,7 +100,7 @@ app.post('/login', async (req, res) => {
     const user = await DB.getUser(req.body.username)
     if (user) {
       req.session.user = user;
-      res.redirect('/home');
+      res.redirect('/');
       return;
     }
 
@@ -137,7 +138,17 @@ app.post('/signup', async (req, res) => {
   }
 });
 
-app.get('/home', checkSignIn, (req, res) => {
+app.post("/getOwner", async (req, res) => {
+  // load the owner wallet
+  const ownerWallet = await Utils.getOwnerWallet(OWNER_WALLET_ADDRESS);
+
+  res.json({
+    net: CLUSTERS.DEVNET,
+    pubKey: ownerWallet.publicKey.toString() 
+  });
+})
+
+app.get('/', checkSignIn, (req, res) => {
   res.render('home', {
     username: req.session.user.username
   })
@@ -147,30 +158,6 @@ app.get('/home', checkSignIn, (req, res) => {
 app.get("/heros", (req, res) => {
   res.sendFile(__dirname + '/views/index.html');
 });
-
-app.post("/getTokensByOwner", async (req, res) => {
-  // get all nfts in Phantom wallet
-  const mints = await Utils.getTokensByOwner(req.body.publicKey);
-  const filtered = mints.filter((elem) => elem.account.data.parsed.info.tokenAmount.uiAmount != 0)
-
-  let result = []
-
-  for (let j = 0; j < filtered.length; j++) {
-    const elem = filtered[j];
-
-    if (elem.account.data.parsed.info.tokenAmount.uiAmount != 0) {
-      Utils.getMeta(elem.account.data.parsed.info.mint).then((piece) => {
-        result.push(piece)
-        if (result.length == filtered.length) {
-          res.json(result)
-        }
-      }).catch((e) => {
-        console.log('error is detected when get the metadata')
-        result.push(null)
-      })
-    }
-  }
-})
 
 socketio.on('connection', function (socket) {
   let playerId = socket.id;
@@ -187,6 +174,7 @@ socketio.on('connection', function (socket) {
       game_coin: 0,
       total_bet: 0,
       bet: 0,
+      signature: '',
     }
 
     const index = playerList.findIndex((elem) => elem.username == data.username);
@@ -209,6 +197,11 @@ socketio.on('connection', function (socket) {
 
   socket.on('create-room', (data) => {
     let player = getPlayer(data);
+
+    if (!player) {
+      console.log('is not exist');
+      return;
+    }
 
     if (player.roomId != 0) {
       console.log(`${player.username} has already room`);
@@ -319,6 +312,7 @@ socketio.on('connection', function (socket) {
     }
 
     player.ready = true
+    player.signature = data.signature
     player.game_coin = MAX_GAME_COIN;
     socket.emit('ready');
 

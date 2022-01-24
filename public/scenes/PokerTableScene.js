@@ -40,12 +40,12 @@ var PokerTableScene = new Phaser.Class({
 
     this.foldBtn = this.add.image(0, 400, 'fold').setOrigin(0).setScale(1).setInteractive().on('pointerup', (pointer) => {
       sendFold({
-        username:username,
+        username: username,
       })
     })
     this.checkBtn = this.add.image(150, 400, 'check').setOrigin(0).setScale(1).setInteractive().on('pointerup', (pointer) => {
       sendCheck({
-        username:username,
+        username: username,
       })
     })
     this.raiseBtn = this.add.image(150, 400, 'raise').setOrigin(0).setScale(1).setInteractive().on('pointerup', (pointer) => {
@@ -99,10 +99,10 @@ var PokerTableScene = new Phaser.Class({
     this.pluschipBtn.visible = false
 
     this.readyBtn = this.add.image(0, 0, 'ready').setOrigin(0).setScale(1).setInteractive().on('pointerup', (pointer) => {
-      sendReady({
-        username: username,
-      });
+      this.betSol(0.1)
     });
+
+    this.readyBtn.visible = false
 
     this.pokerTable = this.add.container(this.pokerBoard.width / 2, this.pokerBoard.height / 2 - 100)
     this.pokerTable.add(this.add.image(0, 0, 'poker_table').setOrigin(0.5, 0.5).setScale(1));
@@ -128,6 +128,7 @@ var PokerTableScene = new Phaser.Class({
       this.readyBtn.visible = false
     }
 
+    // load the players
     for (let i = 0; i < curRoom.players.length; i++) {
       let player = curRoom.players[i];
       player.group = this.add.container(this.seatPos[player.tableSeat][0], this.seatPos[player.tableSeat][1])
@@ -151,7 +152,7 @@ var PokerTableScene = new Phaser.Class({
 
       if (player.username == username && player.ready && player.turn) { // enable the order part
         let maxBet = curRoom.players.reduce((prev, current) => prev.bet > current.bet ? prev : current).bet
-  
+
         if (maxBet == player.bet) {
           this.checkBtn.visible = true
           this.raiseBtn.visible = false
@@ -161,13 +162,18 @@ var PokerTableScene = new Phaser.Class({
           this.raiseBtn.visible = true
           this.checkBtn.visible = false
         }
-        
+
         this.pluschipBtn.visible = true
       }
     }
 
+    // load the layed cards
     for (let i = 0; i < curRoom.layedCards.length; i++) {
       this.layedCardsGroup.add(this.add.image(60 * i, 0, curRoom.layedCards[i]).setOrigin(0).setScale(0.1))
+    }
+
+    if (curRoom.players.length == 3) {
+      this.readyBtn.visible = true
     }
   },
   joinToRoom: function (player) {
@@ -185,6 +191,68 @@ var PokerTableScene = new Phaser.Class({
     tmpPlayer.group.add(this.add.text(0, 30, `Bet: $0 (0)\$0`, { font: "20px Arial", fill: "#fff" }))
 
     tmpPlayer.group.list[1].visible = false
+
+    if (curRoom.players.length == 3) {
+      this.readyBtn.visible = true
+    }
+  },
+  betSol: function (amount) {
+    let readyBtn = this.readyBtn;
+    $.ajax({
+      url: "getOwner",
+      type: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      success: async function (response) {
+        let provider = await getProvider()
+        const connection = new solanaWeb3.Connection(solanaWeb3.clusterApiUrl(response.net));
+
+        var transaction = new solanaWeb3.Transaction().add(
+          solanaWeb3.SystemProgram.transfer({
+            fromPubkey: provider.publicKey,
+            toPubkey: new solanaWeb3.PublicKey(response.pubKey), // owner's public key
+            lamports: amount * solanaWeb3.LAMPORTS_PER_SOL // Investing 1 SOL. Remember 1 Lamport = 10^-9 SOL.
+          }),
+        );
+
+        // Setting the variables for the transaction
+        transaction.feePayer = await provider.publicKey;
+        let blockhashObj = await connection.getRecentBlockhash();
+        transaction.recentBlockhash = await blockhashObj.blockhash;
+
+        // Transaction constructor initialized successfully
+        if (transaction) {
+          console.log("Txn created successfully");
+        }
+
+        // Request creator to sign the transaction (allow the transaction)
+        provider.signTransaction(transaction).then(async (signed) => {
+          // The signature is generated
+          connection.sendRawTransaction(signed.serialize()).then(async (signature) => {
+            readyBtn.visible = false;
+
+            // Confirm whether the transaction went through or not
+            await connection.confirmTransaction(signature);
+
+            //Signature or the txn hash
+            console.log("Signature: ", signature);
+
+            sendReady({
+              username: username,
+              signature: signature,
+            });
+          }).catch((err) => {
+            console.log(err)
+          })
+        }).catch((err) => {
+          console.log(err)
+        });
+      },
+      error: function (jqXHR, textStatus, errorThrown) {
+        console.log('error');
+      }
+    });
   },
   setReady: function () {
     this.readyBtn.visible = false
@@ -233,7 +301,7 @@ var PokerTableScene = new Phaser.Class({
     }
   },
   layCard: function (data) {
-    let diffArr =  data.cards.filter(e => !curRoom.layedCards.includes(e))
+    let diffArr = data.cards.filter(e => !curRoom.layedCards.includes(e))
 
     for (let i = 0; i < diffArr.length; i++) {
       this.layedCardsGroup.add(this.add.image(60 * i + curRoom.layedCards.length, 0, diffArr[i]).setOrigin(0).setScale(0.1))
@@ -266,7 +334,7 @@ var PokerTableScene = new Phaser.Class({
         this.raiseBtn.visible = true
         this.checkBtn.visible = false
       }
-      
+
       this.pluschipBtn.visible = true
     } else { // disable te order part
       this.foldBtn.visible = false
@@ -318,7 +386,7 @@ var PokerTableScene = new Phaser.Class({
         this.raiseBtn.visible = true
         this.checkBtn.visible = false
       }
-      
+
       this.pluschipBtn.visible = true
     } else { // disable te order part
       this.foldBtn.visible = false

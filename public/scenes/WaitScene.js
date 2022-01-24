@@ -17,7 +17,11 @@ var WaitScene = new Phaser.Class({
     this.add.image(0, 0, 'background').setOrigin(0).setScale(1)
 
     this.add.image(50, 50, 'create_room').setOrigin(0).setInteractive().on('pointerup', (pointer) => {
-      sendCreateRoom(username);
+      getProvider().then(provider => {
+        sendCreateRoom(username);
+      }).catch((err) => {
+        console.log(err)
+      });
     });
 
     connectNewPlayer();
@@ -31,7 +35,11 @@ var WaitScene = new Phaser.Class({
     for (let i = 0; i < data.rooms.length; i++) {
       const elem = data.rooms[i];
       this.roomContainer.add(this.add.image(i * 250, 160, 'room-sprite').setOrigin(0).setScale(1).setInteractive().on('pointerup', (pointer) => {
-        sendJoinRoom(username, elem.id)
+        getProvider().then(provider => {
+          sendJoinRoom(username, elem.id)
+        }).catch((err) => {
+          console.log(err)
+        });
       }))
       this.roomContainer.add(this.add.text(i * 250, 160, `Room ${elem.id}`, { font: "bold 32px Arial", fill: "#fff" }))
     }
