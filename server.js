@@ -5,7 +5,7 @@ import { createServer } from 'http';
 import session from 'express-session';
 import cookieParser from 'cookie-parser';
 
-import { MAX_ROOM_PLAYERS, MAX_GAME_COIN, SMALL_BLIND, OWNER_WALLET_ADDRESS, CLUSTERS } from './config/index.js'
+import { MAX_ROOM_PLAYERS, MAX_GAME_COIN, SMALL_BLIND, CLUSTERS } from './config/index.js'
 import poker from './poker/index.js'
 
 const app = express();
@@ -77,8 +77,6 @@ let shuffleDeck = () => {
     cards[i] = cards[j];
     cards[j] = tmp;
   }
-
-  console.log(cards)
 }
 
 let checkSignIn = (req, res, next) => {
@@ -140,11 +138,11 @@ app.post('/signup', async (req, res) => {
 
 app.post("/getOwner", async (req, res) => {
   // load the owner wallet
-  const ownerWallet = await Utils.getOwnerWallet(OWNER_WALLET_ADDRESS);
+  const ownerWallet = await Utils.getOwnerWallet(process.env.OWNER_WALLET_ADDRESS);
 
   res.json({
     net: CLUSTERS.DEVNET,
-    pubKey: ownerWallet.publicKey.toString() 
+    pubKey: ownerWallet.publicKey.toString()
   });
 })
 
@@ -285,6 +283,16 @@ socketio.on('connection', function (socket) {
     let player = getPlayer(data.username);
     let room = getRoom(player.roomId);
 
+    if (!player) {
+      console.log('is not exist');
+      return;
+    }
+
+    if (!room) {
+      console.log('room does not exist');
+      return;
+    }
+
     broadcastToRoom(player.roomId, 'leave-room', {
       username: player.username,
     })
@@ -397,6 +405,7 @@ socketio.on('connection', function (socket) {
           room.layedCards.push(cards[cards.length - 2])
           room.layedCards.push(cards[cards.length - 3])
         } else if (room.layedCards.length == 5) { // for final result
+          // get the winner in the table
           let winner = poker.getWinner(room.players, room.layedCards);
           console.log(winner)
           winner = room.players.find(elem => elem.username == winner.username)
@@ -409,17 +418,42 @@ socketio.on('connection', function (socket) {
             room.players[i].handed = []
           }
 
+          // init the table
+          initTable(room)
+
+          // get the busting players
+          let bustingPlayers = room.players.filter(elem => elem.game_coin <= 0 && elem.username != winner.username)
+          for (let i = 0; i < bustingPlayers.length; i++) {
+            const elem = bustingPlayers[i];
+            broadcastToRoom(elem.roomId, '', 'leave-room', {
+              username: elem.username,
+            })
+
+            elem.roomId = 0
+            elem.scene = 'WaitScene'
+
+            room.players = room.players.filter(e => e.username != elem.username)
+            roomList = roomList.filter(e => e.players.length != 0)
+          }
+
+          if (bustingPlayers.length > 0) { // end the game
+            // ........................................
+            return;
+          }
+
+          // remove the old dealer
           let tmpDealer = room.players.find(elem => elem.dealer)
           tmpDealer.dealer = false;
 
+          // set the new dealer
           tmpDealer = getNextSeatPlayer(room.players, player)
           tmpDealer.dealer = true;
 
-          initTable(room)
+          // start new table
           startTable(room, tmpDealer)
 
           broadcastToRoom(player.roomId, '', 'start-table', {
-            players: room.players
+            players: room.players,
           })
 
           return;

@@ -82,9 +82,7 @@ let sendLeaveRoom = (username) => {
 }
 
 socket.on('leave-room', (data) => {
-  if (data.username == username) {
-    currentScene.scene.start("WaitScene");
-  }
+  currentScene.removePlayer(data)
 })
 
 let selectHero = (username, hero) => {

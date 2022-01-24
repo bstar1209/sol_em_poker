@@ -196,6 +196,15 @@ var PokerTableScene = new Phaser.Class({
       this.readyBtn.visible = true
     }
   },
+  removePlayer: function (data) {
+    console.log(data, username)
+    
+    if (data.username == username) {
+      currentScene.scene.start("WaitScene");
+    } else {
+      // let tmpPlayer = curRoom.players.find(elem => elem.username == data.username);
+    }
+  },
   betSol: function (amount) {
     let readyBtn = this.readyBtn;
     $.ajax({
