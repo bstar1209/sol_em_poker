@@ -202,8 +202,7 @@ socketio.on('connection', function (socket) {
   });
 
   socket.on('create-room', (data) => {
-    let player = getPlayer(data);
-
+    let player = getPlayer(data.username);
     if (!player) {
       console.log('is not exist');
       return;
@@ -217,12 +216,14 @@ socketio.on('connection', function (socket) {
     unqueRoomId++;
     player.roomId = unqueRoomId; // assign the room id
     player.scene = 'PokerTableScene'
+    player.signature = data.signature
 
     let room = {
       id: unqueRoomId,
       players: [],
       status: ROOM_STATUS.IDLE,
       layedCards: [],
+      type: data.type,
     }
 
     player.tableSeat = Math.floor(Math.random() * 10); // set the table seat number
@@ -246,7 +247,7 @@ socketio.on('connection', function (socket) {
       console.log('is not exist');
       return;
     }
-    
+
     if (player.roomId != 0) {
       console.log(`${player.username} has already room`);
       return;
@@ -269,6 +270,7 @@ socketio.on('connection', function (socket) {
     }
 
     player.roomId = data.roomId; // assign the room id
+    player.signature = data.signature
 
     let randomSeat = Math.floor(Math.random() * 10);
 
@@ -298,7 +300,7 @@ socketio.on('connection', function (socket) {
       console.log('is not exist');
       return;
     }
-    
+
     let room = getRoom(player.roomId);
     if (!room) {
       console.log('room does not exist');
@@ -315,6 +317,7 @@ socketio.on('connection', function (socket) {
     })
 
     player.roomId = 0
+    player.signature = ''
     player.scene = 'WaitScene'
 
     room.players = room.players.filter(elem => elem.username != data.username)
@@ -347,7 +350,6 @@ socketio.on('connection', function (socket) {
     }
 
     player.ready = true
-    player.signature = data.signature
     player.game_coin = MAX_GAME_COIN;
     socket.emit('ready');
 

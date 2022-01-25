@@ -100,7 +100,9 @@ var PokerTableScene = new Phaser.Class({
     this.pluschipBtn.visible = false
 
     this.readyBtn = this.add.image(0, 0, 'ready').setOrigin(0).setScale(1).setInteractive().on('pointerup', (pointer) => {
-      this.betSol(0.01)
+      sendReady({
+        username: username,
+      });
     });
     this.readyBtn.visible = false
 
@@ -218,64 +220,6 @@ var PokerTableScene = new Phaser.Class({
 
       this.readyBtn.visible = false
     }
-  },
-  betSol: function (amount) {
-    let readyBtn = this.readyBtn;
-    $.ajax({
-      url: "getOwner",
-      type: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      success: async function (response) {
-        let provider = await getProvider()
-        const connection = new solanaWeb3.Connection(solanaWeb3.clusterApiUrl(response.net));
-
-        var transaction = new solanaWeb3.Transaction().add(
-          solanaWeb3.SystemProgram.transfer({
-            fromPubkey: provider.publicKey,
-            toPubkey: new solanaWeb3.PublicKey(response.pubKey), // owner's public key
-            lamports: amount * solanaWeb3.LAMPORTS_PER_SOL // Investing 1 SOL. Remember 1 Lamport = 10^-9 SOL.
-          }),
-        );
-
-        // Setting the variables for the transaction
-        transaction.feePayer = await provider.publicKey;
-        let blockhashObj = await connection.getRecentBlockhash();
-        transaction.recentBlockhash = await blockhashObj.blockhash;
-
-        // Transaction constructor initialized successfully
-        if (transaction) {
-          console.log("Txn created successfully");
-        }
-
-        // Request creator to sign the transaction (allow the transaction)
-        provider.signTransaction(transaction).then(async (signed) => {
-          // The signature is generated
-          connection.sendRawTransaction(signed.serialize()).then(async (signature) => {
-            readyBtn.visible = false;
-
-            // Confirm whether the transaction went through or not
-            await connection.confirmTransaction(signature);
-
-            // Signature or the txn hash
-            console.log("Signature: ", signature);
-
-            sendReady({
-              username: username,
-              signature: signature,
-            });
-          }).catch((err) => {
-            console.log(err)
-          })
-        }).catch((err) => { // reject the request or etc
-          console.log(err)
-        });
-      },
-      error: function (jqXHR, textStatus, errorThrown) {
-        console.log('error');
-      }
-    });
   },
   setReady: function () {
     this.readyBtn.visible = false

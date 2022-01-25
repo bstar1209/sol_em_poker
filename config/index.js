@@ -17,6 +17,13 @@ export const PLAYER_STATUS = {
   BUSTED: 'busted',
 }
 
+export const ROOM_TYPE = {
+  0: 0.1,
+  1: 0.25,
+  2: 0.5,
+  3: 1,
+}
+
 export const CANDY_MACHINE_ID = 'Adn5LxhaZvKiUdNxsDd9ZtPwaiWfxD9KdLoU2zR1J7qA'
 
 export const ANCHOR_URL = "https://solana-api.projectserum.com"

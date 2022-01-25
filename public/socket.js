@@ -35,8 +35,8 @@ socket.on('player-list', (data) => {
 })
 
 // create new room
-let sendCreateRoom = (username) => {
-  socket.emit('create-room', username)
+let sendCreateRoom = (data) => {
+  socket.emit('create-room', data)
 }
 
 socket.on('create-room', (data) => {
@@ -57,11 +57,8 @@ socket.on('create-room', (data) => {
 })
 
 // join to room
-let sendJoinRoom = (username, roomId) => {
-  socket.emit('join-room', {
-    roomId: roomId,
-    username: username
-  })
+let sendJoinRoom = (data) => {
+  socket.emit('join-room', data)
 }
 
 socket.on('join-room', (data) => {
