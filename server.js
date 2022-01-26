@@ -34,6 +34,7 @@ import ejs from 'ejs'
 import DB from './db/index.js'
 
 import dotenv from 'dotenv'
+import { setTimeout } from 'timers/promises';
 dotenv.config();
 
 const __dirname = path.resolve();
@@ -368,7 +369,7 @@ socketio.on('connection', function (socket) {
 
       let randomChance = Math.random();
       console.log(randomChance)
-    
+
       if (randomChance >= 0.69) {
         room.reward = 2
       } else if (randomChance >= 0.21) {
@@ -384,7 +385,7 @@ socketio.on('connection', function (socket) {
       const holderWallet = await Utils.getOwnerWallet(process.env.HOLDER_WALLET);
       // 8% to Holder Wallet
       Utils.transferSOL(process.env.MASTER_WALLET, holderWallet.publicKey.toString(), ROOM_TYPE[room.type] * 0.08)
-      
+
       const creatorWallet = await Utils.getOwnerWallet(process.env.CREATOR_WALLET);
       // 2% to Creator Wallet
       Utils.transferSOL(process.env.MASTER_WALLET, creatorWallet.publicKey.toString(), ROOM_TYPE[room.type] * 0.02)
@@ -460,12 +461,8 @@ socketio.on('connection', function (socket) {
     let nextPlayer = getNextSeatPlayer(room.players, player)
     if (nextPlayer) { // next seat player
       if ((nextPlayer.bet == maxBet && nextPlayer.bet != 0) ||
-        (nextPlayer.status == PLAYER_STATUS.CHECKED && nextPlayer.bet == 0)) { // have to lay the new 3 cards
-        if (room.layedCards.length == 0) {
-          room.layedCards.push(cards[cards.length - 1])
-          room.layedCards.push(cards[cards.length - 2])
-          room.layedCards.push(cards[cards.length - 3])
-        } else if (room.layedCards.length == 5) { // for final result
+        (nextPlayer.status == PLAYER_STATUS.CHECKED && nextPlayer.bet == 0)) { // have to lay the new card
+        if (room.layedCards.length == 5) { // for final result
           // get the winner in the table
           let winner = poker.getWinner(room.players, room.layedCards);
           console.log(winner)
@@ -478,6 +475,10 @@ socketio.on('connection', function (socket) {
 
             room.players[i].handed = []
           }
+
+          broadcastToRoom(room.id, '', 'end-round', {
+            player: winner,
+          })
 
           // init the table
           initTable(room)
@@ -519,13 +520,14 @@ socketio.on('connection', function (socket) {
 
             Utils.transferSOL(process.env.MASTER_WALLET, winner.pubKey, ROOM_TYPE[room.type] * room.reward)
 
-            // broadcastToRoom(room.id, '', 'end-table', {
-            //   player: winner,
-            // })
-
             winner.roomId = 0
             room.players = []
+
             roomList = roomList.filter(elem => elem.players.length != 0)
+            
+            broadcastToPlayer('', 'remove-room', {
+              rooms: roomList,
+            })
             return;
           }
 
@@ -535,37 +537,39 @@ socketio.on('connection', function (socket) {
           broadcastToRoom(room.id, '', 'start-table', {
             players: room.players,
           })
+        } else {
+          if (room.layedCards.length == 0) { // lay 3 cards first
+            room.layedCards.push(cards[cards.length - 1])
+            room.layedCards.push(cards[cards.length - 2])
+            room.layedCards.push(cards[cards.length - 3])
+          } else if (0 < room.layedCards.length && room.layedCards.length < 5) { // have to lay the new one card
+            room.layedCards.push(cards[cards.length - (room.layedCards.length + 1)])
+          }
 
-          return;
-        } else { // have to lay the new one card
-          room.layedCards.push(cards[cards.length - (room.layedCards.length + 1)])
-        }
-
-        broadcastToRoom(player.roomId, '', 'lay-card', {
-          cards: room.layedCards,
-        });
-
-        // new round and clear the bet
-        room.players.forEach(elem => {
-          elem.bet = 0;
-          elem.status != PLAYER_STATUS.FOLDED ? elem.status = PLAYER_STATUS.PLAYING : elem.status = PLAYER_STATUS.FOLDED
-        })
-
-        nextPlayer = getNextSeatPlayer(room.players, room.players.find(elem => elem.dealer))
-        if (nextPlayer) {
-          nextPlayer.turn = true
-          broadcastToRoom(player.roomId, '', 'new-round', {
-            players: room.players,
+          broadcastToRoom(player.roomId, '', 'lay-card', {
+            cards: room.layedCards,
           });
+
+          // new round and clear the bet
+          room.players.forEach(elem => {
+            elem.bet = 0;
+            elem.status != PLAYER_STATUS.FOLDED ? elem.status = PLAYER_STATUS.PLAYING : elem.status = PLAYER_STATUS.FOLDED
+          })
+
+          nextPlayer = getNextSeatPlayer(room.players, room.players.find(elem => elem.dealer))
+          if (nextPlayer) {
+            nextPlayer.turn = true
+            broadcastToRoom(player.roomId, '', 'new-round', {
+              players: room.players,
+            });
+          }
         }
-
-        return;
+      } else {
+        broadcastToRoom(player.roomId, '', 'check', {
+          player: player,
+          nextUsername: nextPlayer.username,
+        });
       }
-
-      broadcastToRoom(player.roomId, '', 'check', {
-        player: player,
-        nextUsername: nextPlayer.username,
-      });
     }
   })
 
@@ -809,6 +813,4 @@ let startTable = (room, dealer) => {
   if (tmpPlayer) {
     tmpPlayer.turn = true
   }
-
-  console.log(room)
 }

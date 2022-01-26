@@ -191,6 +191,6 @@ socket.on('dead-card', (data) => {
   currentScene.deadCard(data)
 })
 
-socket.on('end-table', (data) => {
-  currentScene.endTable(data)
+socket.on('end-round', (data) => {
+  currentScene.endRound(data)
 })

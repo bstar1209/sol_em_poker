@@ -33,6 +33,8 @@ var PokerTableScene = new Phaser.Class({
       this.load.image(`c${i}`, `images/cards/${rank}_of_clubs.png`)
       this.load.image(`s${i}`, `images/cards/${rank}_of_spades.png`)
     }
+
+    this.load.image('card_back', 'images/cards/card_back.png')
   },
   create: function () {
     currentScene = this;
@@ -44,7 +46,7 @@ var PokerTableScene = new Phaser.Class({
 
     this.layedCardsGroup = this.add.container(550, 340)
     this.pokerTable.add(this.layedCardsGroup)
-    
+
     this.foldBtn = this.add.image(0, 400, 'fold').setOrigin(0).setScale(1).setInteractive().on('pointerup', (pointer) => {
       sendFold({
         username: username,
@@ -117,9 +119,9 @@ var PokerTableScene = new Phaser.Class({
     })
 
     this.seatPos = [
-      [683, 650],
-      [175, 385],
-      [1195, 385],
+      [683, 597],
+      [214, 348],
+      [1148, 348],
     ];
 
     // load the players
@@ -231,8 +233,13 @@ var PokerTableScene = new Phaser.Class({
       tmpPlayer.group.list[2].setColor('#fff')
       tmpPlayer.group.list[3].setText(`Bet: $${tmpPlayer.bet} (${tmpPlayer.total_bet})\n$${tmpPlayer.game_coin}`)
 
-      tmpPlayer.card.add(this.add.image(0, 70, tmpPlayer.handed[0]).setOrigin(0).setScale(0.1))
-      tmpPlayer.card.add(this.add.image(50, 70, tmpPlayer.handed[1]).setOrigin(0).setScale(0.1))
+      if (tmpPlayer.username == username) {
+        tmpPlayer.card.add(this.add.image(0, 70, tmpPlayer.handed[0]).setOrigin(0).setScale(0.1))
+        tmpPlayer.card.add(this.add.image(60, 70, tmpPlayer.handed[1]).setOrigin(0).setScale(0.1))
+      } else { // show the back
+        tmpPlayer.card.add(this.add.image(0, 70, 'card_back').setOrigin(0).setScale(0.1))
+        tmpPlayer.card.add(this.add.image(30, 70, 'card_back').setOrigin(0).setScale(0.1))
+      }
     }
 
     let dealerName = players.find(elem => elem.dealer).username;
@@ -389,29 +396,12 @@ var PokerTableScene = new Phaser.Class({
       this.pluschipBtn.visible = false
     }
   },
-  endTable: function (data) {
-    console.log(data)
+  endRound: function (data) {
+    for (let i = 0; i < curRoom.players.length; i++) {
+      let tmpPlayer = curRoom.players[i]
 
-    if (username == data.player.username) {
-      let tmpPlayer = curRoom.players.find(elem => elem.username == username);
-
-      tmpPlayer.card.removeAll();
-      tmpPlayer.game_coin = 0
-      tmpPlayer.total_bet = 0
-      tmpPlayer.bet = 0
-
-      tmpPlayer.group.list[1].visible = false
-      tmpPlayer.group.list[2].setColor('#fff')
-      tmpPlayer.group.list[3].setText(`Bet: $${tmpPlayer.bet} (${tmpPlayer.total_bet})\n$${tmpPlayer.game_coin}`)
-
-      // disable all operation button
-      this.foldBtn.visible = false
-      this.raiseBtn.visible = false
-      this.checkBtn.visible = false
-
-      this.pluschipBtn.visible = false
-
-      this.layedCardsGroup.removeAll()
+      tmpPlayer.card.list[0].setTexture(tmpPlayer.handed[0])
+      tmpPlayer.card.list[1].setTexture(tmpPlayer.handed[1])
     }
   },
   getCardName: function (card) {
