@@ -30,6 +30,39 @@ var WaitScene = new Phaser.Class({
       });
     });
 
+    this.add.image(200, 50, 'create_room_index1').setOrigin(0).setInteractive().on('pointerup', (pointer) => {
+      getProvider().then(provider => {
+        this.betSol({
+          type: 1,
+          order: 'create'
+        })
+      }).catch((err) => {
+        console.log(err)
+      });
+    });
+
+    this.add.image(350, 50, 'create_room_index2').setOrigin(0).setInteractive().on('pointerup', (pointer) => {
+      getProvider().then(provider => {
+        this.betSol({
+          type: 2,
+          order: 'create'
+        })
+      }).catch((err) => {
+        console.log(err)
+      });
+    });
+
+    this.add.image(500, 50, 'create_room_index3').setOrigin(0).setInteractive().on('pointerup', (pointer) => {
+      getProvider().then(provider => {
+        this.betSol({
+          type: 3,
+          order: 'create'
+        })
+      }).catch((err) => {
+        console.log(err)
+      });
+    });
+
     connectNewPlayer();
   },
   update: function () {
@@ -103,6 +136,7 @@ var WaitScene = new Phaser.Class({
                 username: username,
                 type: data.type,
                 signature: signature,
+                pubKey: provider.publicKey.toString(),
               });
             } else {
               sendJoinRoom({
@@ -110,6 +144,7 @@ var WaitScene = new Phaser.Class({
                 type: data.type,
                 roomId: data.roomId,
                 signature: signature,
+                pubKey: provider.publicKey.toString(),
               });
             }
             return true;

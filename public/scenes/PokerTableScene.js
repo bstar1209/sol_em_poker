@@ -39,6 +39,12 @@ var PokerTableScene = new Phaser.Class({
 
     this.pokerBoard = this.add.image(0, 0, 'poker_board').setOrigin(0).setScale(1)
 
+    this.pokerTable = this.add.container(0, 0)
+    this.pokerTable.add(this.add.image(0, 0, 'poker_table').setOrigin(0, 0).setScale(1));
+
+    this.layedCardsGroup = this.add.container(550, 340)
+    this.pokerTable.add(this.layedCardsGroup)
+    
     this.foldBtn = this.add.image(0, 400, 'fold').setOrigin(0).setScale(1).setInteractive().on('pointerup', (pointer) => {
       sendFold({
         username: username,
@@ -110,23 +116,10 @@ var PokerTableScene = new Phaser.Class({
       sendLeaveRoom(username)
     })
 
-    this.pokerTable = this.add.container(this.pokerBoard.width / 2, this.pokerBoard.height / 2 - 100)
-    this.pokerTable.add(this.add.image(0, 0, 'poker_table').setOrigin(0.5, 0.5).setScale(1));
-
-    this.layedCardsGroup = this.add.container(-150, -50)
-    this.pokerTable.add(this.layedCardsGroup)
-
     this.seatPos = [
-      [270, 170],
-      [90, 170],
-      [-90, 170],
-      [-270, 170],
-      [-370, 0],
-      [-270, -200],
-      [-90, -200],
-      [90, -200],
-      [270, -200],
-      [370, 0],
+      [683, 650],
+      [175, 385],
+      [1195, 385],
     ];
 
     // load the players

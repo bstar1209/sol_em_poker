@@ -1,6 +1,15 @@
 import Base58 from 'bs58'
 import * as anchor from "@project-serum/anchor";
-import { Connection, PublicKey, clusterApiUrl, Keypair } from '@solana/web3.js';
+import { 
+  Connection, 
+  PublicKey, 
+  clusterApiUrl, 
+  Keypair, 
+  Transaction, 
+  SystemProgram, 
+  LAMPORTS_PER_SOL,
+  sendAndConfirmTransaction, 
+} from '@solana/web3.js';
 import splToken from '@solana/spl-token'
 import { deserializeUnchecked } from 'borsh';
 import fetch from "node-fetch";
@@ -346,13 +355,44 @@ const getOwnerWallet = async (privateKey) => {
   return Keypair.fromSecretKey(new Uint8Array(await string2Uint8Array(privateKey)));
 }
 
+const transferSOL = async (fromPrivateKey, toPubKey, sol) => {
+  let fromWallet = Keypair.fromSecretKey(new Uint8Array(await string2Uint8Array(fromPrivateKey)));
+  const connection = new Connection(clusterApiUrl(CLUSTERS.DEVNET), 'confirmed');
+
+  try {
+    // Add transfer instruction to transaction
+    let transaction = new Transaction().add(
+      SystemProgram.transfer({
+        fromPubkey: fromWallet.publicKey,
+        toPubkey: new PublicKey(toPubKey),
+        lamports: sol * LAMPORTS_PER_SOL,
+      }),
+    );
+
+    // Sign transaction, broadcast, and confirm
+    let signature = await sendAndConfirmTransaction(
+      connection,
+      transaction,
+      [fromWallet],
+    );
+
+    console.log(signature);
+  } catch (error) {
+    console.log(error)
+    return false;
+  }
+
+  return true;
+};
+
 export default {
   string2Uint8Array,
-  Uint8Array2String,  
+  Uint8Array2String,
   getMints,
   getMeta,
   getTokenHolder,
   getMetadataKey,
   getTokensByOwner,
   getOwnerWallet,
+  transferSOL,
 }

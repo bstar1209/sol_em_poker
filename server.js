@@ -8,6 +8,7 @@ import cookieParser from 'cookie-parser';
 import {
   CLUSTERS,
   ROOM_STATUS,
+  ROOM_TYPE,
   PLAYER_STATUS,
   MAX_ROOM_PLAYERS,
   MAX_GAME_COIN,
@@ -27,7 +28,6 @@ import path from 'path';
 import bodyParser from 'body-parser'
 
 import Utils from './solana/utils.js'
-// import solanaContract from './solana/contract.js'
 
 import ejs from 'ejs'
 
@@ -146,7 +146,7 @@ app.post('/signup', async (req, res) => {
 
 app.post("/getOwner", async (req, res) => {
   // load the owner wallet
-  const ownerWallet = await Utils.getOwnerWallet(process.env.OWNER_WALLET_ADDRESS);
+  const ownerWallet = await Utils.getOwnerWallet(process.env.MASTER_WALLET);
 
   res.json({
     net: CLUSTERS.DEVNET,
@@ -181,6 +181,7 @@ socketio.on('connection', function (socket) {
       total_bet: 0,
       bet: 0,
       signature: '',
+      pubKey: '',
     }
 
     const index = playerList.findIndex((elem) => elem.username == data.username);
@@ -201,6 +202,7 @@ socketio.on('connection', function (socket) {
     })
   });
 
+  // create new room
   socket.on('create-room', (data) => {
     let player = getPlayer(data.username);
     if (!player) {
@@ -217,6 +219,7 @@ socketio.on('connection', function (socket) {
     player.roomId = unqueRoomId; // assign the room id
     player.scene = 'PokerTableScene'
     player.signature = data.signature
+    player.pubKey = data.pubKey
 
     let room = {
       id: unqueRoomId,
@@ -224,9 +227,10 @@ socketio.on('connection', function (socket) {
       status: ROOM_STATUS.IDLE,
       layedCards: [],
       type: data.type,
+      reward: 0,
     }
 
-    player.tableSeat = Math.floor(Math.random() * 10); // set the table seat number
+    player.tableSeat = Math.floor(Math.random() * 3); // set the table seat number
     room.players.push(player);
     roomList.push(room);
 
@@ -241,6 +245,7 @@ socketio.on('connection', function (socket) {
     });
   })
 
+  // join to room
   socket.on('join-room', (data) => {
     let player = getPlayer(data.username);
     if (!player) {
@@ -270,12 +275,13 @@ socketio.on('connection', function (socket) {
     }
 
     player.roomId = data.roomId; // assign the room id
-    player.signature = data.signature
+    player.signature = data.signature // assign the signature
+    player.pubKey = data.pubKey
 
-    let randomSeat = Math.floor(Math.random() * 10);
+    let randomSeat = Math.floor(Math.random() * 3);
 
     while (room.players.find(elem => elem.tableSeat == randomSeat)) {
-      randomSeat = Math.floor(Math.random() * 10);
+      randomSeat = Math.floor(Math.random() * 3);
     }
 
     player.tableSeat = randomSeat; // set the table seat number
@@ -294,6 +300,7 @@ socketio.on('connection', function (socket) {
     });
   })
 
+  // leave room
   socket.on('leave-room', (data) => {
     let player = getPlayer(data.username);
     if (!player) {
@@ -311,6 +318,8 @@ socketio.on('connection', function (socket) {
       console.log('cannot leave room while playing now.')
       return
     }
+
+    Utils.transferSOL(process.env.MASTER_WALLET, player.pubKey, ROOM_TYPE[room.type])
 
     broadcastToRoom(player.roomId, '', 'leave-room', {
       username: player.username,
@@ -336,7 +345,7 @@ socketio.on('connection', function (socket) {
     player.hero.nft = data.hero;
   })
 
-  socket.on('ready', (data) => {
+  socket.on('ready', async (data) => {
     let player = getPlayer(data.username);
     if (!player) {
       console.log('is not exist');
@@ -356,6 +365,29 @@ socketio.on('connection', function (socket) {
     if (room.players.filter(elem => elem.ready).length == MAX_ROOM_PLAYERS) { // all players are ready
       let tmpDealer = room.players[Math.floor(Math.random() * room.players.length)]
       tmpDealer.dealer = true;
+
+      let randomChance = Math.random();
+      console.log(randomChance)
+    
+      if (randomChance >= 0.69) {
+        room.reward = 2
+      } else if (randomChance >= 0.21) {
+        room.reward = 3
+      } else if (randomChance >= 0.07) {
+        room.reward = 5
+      } else if (randomChance >= 0.029) {
+        room.reward = 10
+      } else if (randomChance >= 0.001) {
+        room.reward = 50
+      }
+
+      const holderWallet = await Utils.getOwnerWallet(process.env.HOLDER_WALLET);
+      // 8% to Holder Wallet
+      Utils.transferSOL(process.env.MASTER_WALLET, holderWallet.publicKey.toString(), ROOM_TYPE[room.type] * 0.08)
+      
+      const creatorWallet = await Utils.getOwnerWallet(process.env.CREATOR_WALLET);
+      // 2% to Creator Wallet
+      Utils.transferSOL(process.env.MASTER_WALLET, creatorWallet.publicKey.toString(), ROOM_TYPE[room.type] * 0.02)
 
       startTable(room, tmpDealer)
 
@@ -454,7 +486,7 @@ socketio.on('connection', function (socket) {
           let bustingPlayers = room.players.filter(elem => elem.game_coin <= 0 && elem.username != winner.username)
           for (let i = 0; i < bustingPlayers.length; i++) {
             const elem = bustingPlayers[i];
-            broadcastToRoom(elem.roomId, '', 'leave-room', {
+            broadcastToRoom(elem.roomId, elem.id, 'leave-room', {
               username: elem.username,
             })
 
@@ -485,9 +517,15 @@ socketio.on('connection', function (socket) {
             winner.status = PLAYER_STATUS.IDLE
             winner.dealer = false
 
-            broadcastToRoom(room.id, '', 'end-table', {
-              player: winner,
-            })
+            Utils.transferSOL(process.env.MASTER_WALLET, winner.pubKey, ROOM_TYPE[room.type] * room.reward)
+
+            // broadcastToRoom(room.id, '', 'end-table', {
+            //   player: winner,
+            // })
+
+            winner.roomId = 0
+            room.players = []
+            roomList = roomList.filter(elem => elem.players.length != 0)
             return;
           }
 
@@ -710,7 +748,7 @@ let refreshCards = (army, enemy) => {
 }
 
 let getNextSeatPlayer = (players, curPlayer) => {
-  for (let i = (curPlayer.tableSeat + 1) % 10; ;) {
+  for (let i = (curPlayer.tableSeat + 1) % 3; ;) {
     let nextSeatPlayer = players.find(elem => elem.tableSeat == i && elem.status != PLAYER_STATUS.FOLDED && elem.status != PLAYER_STATUS.BUSTED)
 
     if (nextSeatPlayer) {
@@ -722,7 +760,7 @@ let getNextSeatPlayer = (players, curPlayer) => {
     }
 
     i++
-    i = i % 10
+    i = i % 3
   }
 }
 
@@ -737,7 +775,7 @@ let startTable = (room, dealer) => {
   shuffleDeck()
 
   // assign two cards into players
-  for (let i = (dealer.tableSeat + 1) % 10, j = 0; ;) {
+  for (let i = (dealer.tableSeat + 1) % 3, j = 0; ;) {
     let tmpPlayer = room.players.find(elem => elem.tableSeat == i)
     if (tmpPlayer) {
       tmpPlayer.status = PLAYER_STATUS.PLAYING
@@ -750,7 +788,7 @@ let startTable = (room, dealer) => {
     if (i == dealer.tableSeat) break;
 
     i++
-    i = i % 10
+    i = i % 3
   }
 
   let tmpPlayer = getNextSeatPlayer(room.players, dealer);
@@ -771,4 +809,6 @@ let startTable = (room, dealer) => {
   if (tmpPlayer) {
     tmpPlayer.turn = true
   }
+
+  console.log(room)
 }
