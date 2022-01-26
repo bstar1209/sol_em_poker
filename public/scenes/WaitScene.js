@@ -19,7 +19,7 @@ var WaitScene = new Phaser.Class({
 
     this.roomContainer = this.add.container(100, 120);
 
-    this.add.image(50, 50, 'create_room_index1').setOrigin(0).setInteractive().on('pointerup', (pointer) => {
+    this.add.image(50, 50, 'create_room_index0').setOrigin(0).setInteractive().on('pointerup', (pointer) => {
       getProvider().then(provider => {
         this.betSol({
           type: 0,
