@@ -219,8 +219,8 @@ socketio.on('connection', function (socket) {
     unqueRoomId++;
     player.roomId = unqueRoomId; // assign the room id
     player.scene = 'PokerTableScene'
-    player.signature = data.signature
-    player.pubKey = data.pubKey
+    // player.signature = data.signature
+    // player.pubKey = data.pubKey
 
     let room = {
       id: unqueRoomId,
@@ -276,8 +276,8 @@ socketio.on('connection', function (socket) {
     }
 
     player.roomId = data.roomId; // assign the room id
-    player.signature = data.signature // assign the signature
-    player.pubKey = data.pubKey
+    // player.signature = data.signature // assign the signature
+    // player.pubKey = data.pubKey
 
     let randomSeat = Math.floor(Math.random() * 3);
 
@@ -320,7 +320,7 @@ socketio.on('connection', function (socket) {
       return
     }
 
-    Utils.transferSOL(process.env.MASTER_WALLET, player.pubKey, ROOM_TYPE[room.type])
+    // Utils.transferSOL(process.env.MASTER_WALLET, player.pubKey, ROOM_TYPE[room.type])
 
     broadcastToRoom(player.roomId, '', 'leave-room', {
       username: player.username,
@@ -382,13 +382,13 @@ socketio.on('connection', function (socket) {
         room.reward = 50
       }
 
-      const holderWallet = await Utils.getOwnerWallet(process.env.HOLDER_WALLET);
-      // 8% to Holder Wallet
-      Utils.transferSOL(process.env.MASTER_WALLET, holderWallet.publicKey.toString(), ROOM_TYPE[room.type] * 0.08)
+      // const holderWallet = await Utils.getOwnerWallet(process.env.HOLDER_WALLET);
+      // // 8% to Holder Wallet
+      // Utils.transferSOL(process.env.MASTER_WALLET, holderWallet.publicKey.toString(), ROOM_TYPE[room.type] * 0.08)
 
-      const creatorWallet = await Utils.getOwnerWallet(process.env.CREATOR_WALLET);
-      // 2% to Creator Wallet
-      Utils.transferSOL(process.env.MASTER_WALLET, creatorWallet.publicKey.toString(), ROOM_TYPE[room.type] * 0.02)
+      // const creatorWallet = await Utils.getOwnerWallet(process.env.CREATOR_WALLET);
+      // // 2% to Creator Wallet
+      // Utils.transferSOL(process.env.MASTER_WALLET, creatorWallet.publicKey.toString(), ROOM_TYPE[room.type] * 0.02)
 
       startTable(room, tmpDealer)
 
@@ -518,7 +518,7 @@ socketio.on('connection', function (socket) {
             winner.status = PLAYER_STATUS.IDLE
             winner.dealer = false
 
-            Utils.transferSOL(process.env.MASTER_WALLET, winner.pubKey, ROOM_TYPE[room.type] * room.reward)
+            // Utils.transferSOL(process.env.MASTER_WALLET, winner.pubKey, ROOM_TYPE[room.type] * room.reward)
 
             winner.roomId = 0
             room.players = []

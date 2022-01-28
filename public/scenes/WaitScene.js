@@ -92,6 +92,25 @@ var WaitScene = new Phaser.Class({
     }
   },
   betSol: function (data) {
+    if (data.order == 'create') {
+      sendCreateRoom({
+        username: username,
+        type: data.type,
+        // signature: signature,
+        // pubKey: provider.publicKey.toString(),
+      });
+    } else {
+      sendJoinRoom({
+        username: username,
+        type: data.type,
+        roomId: data.roomId,
+        // signature: signature,
+        // pubKey: provider.publicKey.toString(),
+      });
+    }
+
+    return;
+
     $.ajax({
       url: "getOwner",
       type: "POST",
