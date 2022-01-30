@@ -10,57 +10,78 @@ var WaitScene = new Phaser.Class({
     this.load.image('create_room_index2', 'images/create_room_index2.png');
     this.load.image('create_room_index3', 'images/create_room_index3.png');
 
-    this.load.image('background', 'images/background.jpg'); // the back ground image for the scene
-    this.load.image('room-sprite', 'images/room-sprite.jpg')
+    this.load.image('room-sprite', 'images/room-sprite.png');
+    this.load.image('top-bar', 'images/topbar.png');
+    //this.load.image('background', 'images/background.png');
   },
   create: function  () {
     currentScene = this;
-    this.add.image(0, 0, 'background').setOrigin(0).setScale(1)
+    //this.add.image(0, 0, 'background').setOrigin(0).setScale(1)
 
-    this.roomContainer = this.add.container(100, 120);
+    this.cameras.main.backgroundColor = Phaser.Display.Color.HexStringToColor("#fff");
+        
+    this.topbar = this.add.image(0, 0, 'top-bar').setOrigin(0, 0).setScale(1);
 
-    this.add.image(50, 50, 'create_room_index0').setOrigin(0).setInteractive().on('pointerup', (pointer) => {
-      getProvider().then(provider => {
-        this.betSol({
-          type: 0,
-          order: 'create'
-        })
-      }).catch((err) => {
-        console.log(err)
-      });
+    this.roomContainer = this.add.container(100, 200);
+
+    this.add.image(50, 100, 'create_room_index0').setOrigin(0).setInteractive().on('pointerup', (pointer) => {
+      this.betSol({
+        type: 0,
+        order: 'create'
+      })
+      // getProvider().then(provider => {
+      //   this.betSol({
+      //     type: 0,
+      //     order: 'create'
+      //   })
+      // }).catch((err) => {
+      //   console.log(err)
+      // });
     });
 
-    this.add.image(200, 50, 'create_room_index1').setOrigin(0).setInteractive().on('pointerup', (pointer) => {
-      getProvider().then(provider => {
-        this.betSol({
-          type: 1,
-          order: 'create'
-        })
-      }).catch((err) => {
-        console.log(err)
-      });
+    this.add.image(200, 100, 'create_room_index1').setOrigin(0).setInteractive().on('pointerup', (pointer) => {
+      this.betSol({
+        type: 1,
+        order: 'create'
+      })
+      // getProvider().then(provider => {
+      //   this.betSol({
+      //     type: 1,
+      //     order: 'create'
+      //   })
+      // }).catch((err) => {
+      //   console.log(err)
+      // });
     });
 
-    this.add.image(350, 50, 'create_room_index2').setOrigin(0).setInteractive().on('pointerup', (pointer) => {
-      getProvider().then(provider => {
-        this.betSol({
-          type: 2,
-          order: 'create'
-        })
-      }).catch((err) => {
-        console.log(err)
-      });
+    this.add.image(350, 100, 'create_room_index2').setOrigin(0).setInteractive().on('pointerup', (pointer) => {
+      this.betSol({
+        type: 2,
+        order: 'create'
+      })
+      // getProvider().then(provider => {
+      //   this.betSol({
+      //     type: 2,
+      //     order: 'create'
+      //   })
+      // }).catch((err) => {
+      //   console.log(err)
+      // });
     });
 
-    this.add.image(500, 50, 'create_room_index3').setOrigin(0).setInteractive().on('pointerup', (pointer) => {
-      getProvider().then(provider => {
-        this.betSol({
-          type: 3,
-          order: 'create'
-        })
-      }).catch((err) => {
-        console.log(err)
-      });
+    this.add.image(500, 100, 'create_room_index3').setOrigin(0).setInteractive().on('pointerup', (pointer) => {
+      this.betSol({
+        type: 3,
+        order: 'create'
+      })
+      // getProvider().then(provider => {
+      //   this.betSol({
+      //     type: 3,
+      //     order: 'create'
+      //   })
+      // }).catch((err) => {
+      //   console.log(err)
+      // });
     });
 
     connectNewPlayer();
@@ -73,20 +94,28 @@ var WaitScene = new Phaser.Class({
 
     for (let i = 0; i < data.rooms.length; i++) {
       const elem = data.rooms[i];
-      let roomObj = this.add.container((i % 4) * 250, Math.floor(i / 4) * 160)
-      roomObj.add(this.add.image(0, 0, 'room-sprite').setOrigin(0).setScale(1).setInteractive().on('pointerup', (pointer) => {
-        getProvider().then(provider => {
-          this.betSol({
-            username: username,
-            type: elem.type,
-            order: 'join',
-            roomId: elem.id,
-          })
-        }).catch((err) => {
-          console.log(err)
-        });
-      }))
-      roomObj.add(this.add.text(0, 0, `Room ${elem.id}\n(${[0.1, 0.25, 0.5, 1][elem.type]} SOL)`, { font: "bold 32px Arial", fill: "#fff" }))
+      let roomObj = this.add.container((i % 4) * 450, Math.floor(i / 2) * 160 + 50)
+      let roomImage = this.add.image(0, 0, 'room-sprite').setOrigin(0).setScale(1);
+      roomObj.add(roomImage.setInteractive().on('pointerup', (pointer) => {
+        this.betSol({
+          username: username,
+          type: elem.type,
+          order: 'join',
+          roomId: elem.id,
+        })
+        // getProvider().then(provider => {
+        //   this.betSol({
+        //     username: username,
+        //     type: elem.type,
+        //     order: 'join',
+        //     roomId: elem.id,
+        //   })
+        // }).catch((err) => {
+        //   console.log(err)
+        // });
+      }))      
+      roomObj.add(this.add.text(roomImage.width/10, roomImage.height*6.5/9, `Room ${elem.id}`, { font: "bold 20px Arial", fill: "#000" }))
+      roomObj.add(this.add.text(roomImage.width*0.9/5, roomImage.height*7.5/9, `${[0.1, 0.25, 0.5, 1][elem.type]} SOL`, { font: "bold 20px Arial", fill: "#000" }))
 
       this.roomContainer.add(roomObj)
     }

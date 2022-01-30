@@ -25,6 +25,10 @@ var PokerTableScene = new Phaser.Class({
     this.load.image('100_chip', 'images/100_chip.png')
     this.load.image('all_chip', 'images/all_chip.png')
 
+    this.load.image('red_coin', 'images/coin/red.png')
+    this.load.image('blue_coin', 'images/coin/blue.png')
+    this.load.image('green_coin', 'images/coin/green.png')    
+
     for (let i = 2; i <= 14; i++) {
       let rank = this.getRank(i);
 
@@ -44,7 +48,7 @@ var PokerTableScene = new Phaser.Class({
     this.pokerTable = this.add.container(0, 0)
     this.pokerTable.add(this.add.image(0, 0, 'poker_table').setOrigin(0, 0).setScale(1));
 
-    this.layedCardsGroup = this.add.container(550, 340)
+    this.layedCardsGroup = this.add.container(550, 300)
     this.pokerTable.add(this.layedCardsGroup)
 
     this.foldBtn = this.add.image(0, 400, 'fold').setOrigin(0).setScale(1).setInteractive().on('pointerup', (pointer) => {
@@ -120,24 +124,84 @@ var PokerTableScene = new Phaser.Class({
 
     this.seatPos = [
       [683, 597],
-      [214, 348],
-      [1148, 348],
+      [214, 248],
+      [1148, 248],
     ];
-
+    console.log("current room", curRoom);
+    
+    for (let i=0; i < curRoom.players.length; i++){
+      let player = curRoom.players[i];
+      if (player.username == username) {
+        console.log("username seat", player.tableSeat);
+        if (player.tableSeat != 0)
+        {
+          switch (player.tableSeat)
+          {
+            case 1:
+              this.seatPos = [
+                [1148, 248],
+                [683, 597],
+                [214, 248],                                
+              ];
+              break;
+            case 2:
+              this.seatPos = [
+                [214, 248],                
+                [1148, 248],
+                [683, 597],                               
+              ];
+              break;
+          }
+        }
+      }
+    }
     // load the players
     for (let i = 0; i < curRoom.players.length; i++) {
       let player = curRoom.players[i];
       player.group = this.add.container(this.seatPos[player.tableSeat][0], this.seatPos[player.tableSeat][1])
-      player.card = this.add.container(this.seatPos[player.tableSeat][0], this.seatPos[player.tableSeat][1])
+
+      switch (this.seatPos[player.tableSeat][0]) {
+        case 683:
+          player.card = this.add.container(this.seatPos[player.tableSeat][0]-150, this.seatPos[player.tableSeat][1]-200)
+          player.coin = this.add.container(this.seatPos[player.tableSeat][0]+100, this.seatPos[player.tableSeat][1]-80)
+          player.betPan = this.add.container(this.seatPos[player.tableSeat][0], this.seatPos[player.tableSeat][1]-170)
+          break;
+        case 1148:
+          player.card = this.add.container(this.seatPos[player.tableSeat][0]-120, this.seatPos[player.tableSeat][1]-10)
+          player.coin = this.add.container(this.seatPos[player.tableSeat][0]-150, this.seatPos[player.tableSeat][1]-20)
+          player.betPan = this.add.container(this.seatPos[player.tableSeat][0]-200, this.seatPos[player.tableSeat][1]+80)
+          break;
+        case 214:
+          player.card = this.add.container(this.seatPos[player.tableSeat][0]+40, this.seatPos[player.tableSeat][1]-10)
+          player.coin = this.add.container(this.seatPos[player.tableSeat][0]+150, this.seatPos[player.tableSeat][1]-40)
+          player.betPan = this.add.container(this.seatPos[player.tableSeat][0]+180, this.seatPos[player.tableSeat][1]+80)
+          break;
+      }
+      
 
       this.pokerTable.add(player.group) // sit the player on the table
       this.pokerTable.add(player.card)
 
-      player.group.add(this.add.image(0, 0, 'poker_user').setOrigin(0.5, 0.5).setScale(0.2)) // assign the avatar
-      player.group.add(this.add.image(0, 0, 'dealer').setOrigin(0, 0.5).setScale(1)) // assign the dealer sign
-      player.group.add(this.add.text(0, 0, `${player.username}`, { font: "bold 28px Arial", fill: "#fff" }))
-      player.group.add(this.add.text(0, 30, `Bet: $0 (0)\n$0`, { font: "20px Arial", fill: "#fff" }))
+      let poker_user = this.add.image(0, 0, 'poker_user').setOrigin(0.5, 0.5).setScale(0.2);
+      player.group.add(poker_user) // assign the avatar
+      // assign the dealer sign
+      switch (this.seatPos[player.tableSeat][0]) {
+        case 683:
+          player.group.add(this.add.image(10, -100, 'dealer').setOrigin(0.5, 0.5).setScale(0.5))
+          break;
+        case 1148:
+          player.group.add(this.add.image(-100, 0, 'dealer').setOrigin(0.5, 0.5).setScale(0.5))
+          break;
+        case 214:
+          player.group.add(this.add.image(100, 0, 'dealer').setOrigin(0.5, 0.5).setScale(0.5))
+          break;
+      }
+      player.group.add(this.add.text(0, 20, `${player.username}`, { font: "bold 20px Arial", fill: "#000" }).setOrigin(0.5, 0))
+      //player.group.add(this.add.text(0, 50, `Bet: $0 (0)`, { font: "20px Arial", fill: "#000" }))
+      player.group.add(this.add.text(0, 50, ``, { font: "20px Arial", fill: "#000" }).setOrigin(0.5, 0))
+      player.group.add(this.add.text(0, 0, `0`, { font: "bold 28px Arial", fill: "#000" }).setOrigin(0.5, 0.5))
 
+      
       if (!player.dealer) {
         player.group.list[1].visible = false
       }
@@ -181,17 +245,46 @@ var PokerTableScene = new Phaser.Class({
     let tmpPlayer = curRoom.players.find(elem => elem.username == player.username);
 
     tmpPlayer.group = this.add.container(this.seatPos[tmpPlayer.tableSeat][0], this.seatPos[tmpPlayer.tableSeat][1])
-    tmpPlayer.card = this.add.container(this.seatPos[tmpPlayer.tableSeat][0], this.seatPos[tmpPlayer.tableSeat][1])
+    
+    switch (this.seatPos[tmpPlayer.tableSeat][0]) {
+      case 683:
+        tmpPlayer.card = this.add.container(this.seatPos[player.tableSeat][0]-150, this.seatPos[player.tableSeat][1]-200)
+        tmpPlayer.coin = this.add.container(this.seatPos[player.tableSeat][0]+100, this.seatPos[player.tableSeat][1]-80)
+        tmpPlayer.betPan = this.add.container(this.seatPos[player.tableSeat][0], this.seatPos[player.tableSeat][1]-170)
+        break;
+      case 1148:
+        tmpPlayer.card = this.add.container(this.seatPos[player.tableSeat][0]-120, this.seatPos[player.tableSeat][1]-10)
+        tmpPlayer.coin = this.add.container(this.seatPos[player.tableSeat][0]-150, this.seatPos[player.tableSeat][1]-20)
+        tmpPlayer.betPan = this.add.container(this.seatPos[player.tableSeat][0]-200, this.seatPos[player.tableSeat][1]+80)
+        break;
+      case 214:
+        tmpPlayer.card = this.add.container(this.seatPos[player.tableSeat][0]+40, this.seatPos[player.tableSeat][1]-10)
+        tmpPlayer.coin = this.add.container(this.seatPos[player.tableSeat][0]+150, this.seatPos[player.tableSeat][1]-40)
+        tmpPlayer.betPan = this.add.container(this.seatPos[player.tableSeat][0]+180, this.seatPos[player.tableSeat][1]+80)
+        break;
+    }
 
     this.pokerTable.add(tmpPlayer.group) // sit the player on the table
     this.pokerTable.add(tmpPlayer.card) // sit the player on the table
 
     tmpPlayer.group.add(this.add.image(0, 0, 'poker_user').setOrigin(0.5, 0.5).setScale(0.2)) // assign the avatar
-    tmpPlayer.group.add(this.add.image(0, 0, 'dealer').setOrigin(0, 0.5).setScale(1)) // assign the dealer sign
-    tmpPlayer.group.add(this.add.text(0, 0, `${tmpPlayer.username}`, { font: "bold 28px Arial", fill: "#fff" }))
-    tmpPlayer.group.add(this.add.text(0, 30, `Bet: $0 (0)\$0`, { font: "20px Arial", fill: "#fff" }))
+    // assign the dealer sign
+    switch (this.seatPos[tmpPlayer.tableSeat][0]) {
+      case 683:
+        tmpPlayer.group.add(this.add.image(10, -100, 'dealer').setOrigin(0.5, 0.5).setScale(0.5))
+        break;
+      case 1148:
+        tmpPlayer.group.add(this.add.image(-100, 0, 'dealer').setOrigin(0.5, 0.5).setScale(0.5))
+        break;
+      case 214:
+        tmpPlayer.group.add(this.add.image(100, 0, 'dealer').setOrigin(0.5, 0.5).setScale(0.5))
+        break;
+    }
+    tmpPlayer.group.add(this.add.text(0, 20, `${tmpPlayer.username}`, { font: "bold 20px Arial", fill: "#000" }).setOrigin(0.5, 0))
+    tmpPlayer.group.add(this.add.text(0, 50, ``, { font: "20px Arial", fill: "#000" }).setOrigin(0.5, 0))
+    tmpPlayer.group.add(this.add.text(0, 0, `0`, { font: "bold 28px Arial", fill: "#000" }).setOrigin(0.5, 0.5))
 
-    tmpPlayer.group.list[1].visible = false
+    tmpPlayer.group.list[1].visible = false    
 
     if (curRoom.players.length == 3 && curRoom.status != 'playing') {
       this.readyBtn.visible = true
@@ -230,8 +323,31 @@ var PokerTableScene = new Phaser.Class({
       tmpPlayer.bet = players[i].bet
 
       tmpPlayer.group.list[1].visible = false; // disable the dealer sign
-      tmpPlayer.group.list[2].setColor('#fff')
-      tmpPlayer.group.list[3].setText(`Bet: $${tmpPlayer.bet} (${tmpPlayer.total_bet})\n$${tmpPlayer.game_coin}`)
+      tmpPlayer.group.list[2].setColor('#000')
+      //tmpPlayer.group.list[3].setText(`Bet: $${tmpPlayer.bet} (${tmpPlayer.total_bet})`)
+      tmpPlayer.group.list[4].setText(`${tmpPlayer.game_coin}`)
+
+      if(tmpPlayer.game_coin > 10)
+      {
+        let green_count = Math.floor(tmpPlayer.game_coin / 200)
+        let blue_count = Math.floor((tmpPlayer.game_coin % 200) / 50)
+        let red_count = Math.floor((tmpPlayer.game_coin % 50) / 10)
+        
+        for (let i=0; i<green_count; i++) {
+          tmpPlayer.coin.add(this.add.image(0, 20-2*i, 'green_coin').setOrigin(0.5, 0.5).setScale(0.3))
+        }
+
+        for (let j=0; j<blue_count; j++) {
+          tmpPlayer.coin.add(this.add.image(-40, 10-2*j, 'blue_coin').setOrigin(0.5, 0.5).setScale(0.3))
+        }
+      
+        for (let n=0; n<red_count; n++)
+        {
+          tmpPlayer.coin.add(this.add.image(-10, -20-2*n, 'red_coin').setOrigin(0.5, 0.5).setScale(0.3))
+        }
+        
+      }        
+      
 
       if (tmpPlayer.username == username) {
         tmpPlayer.card.add(this.add.image(0, 70, tmpPlayer.handed[0]).setOrigin(0).setScale(0.1))
@@ -246,7 +362,7 @@ var PokerTableScene = new Phaser.Class({
     let tmpPlayer = curRoom.players.find(elem => elem.username == dealerName);
     tmpPlayer.group.list[1].visible = true; // show the dealer sign
 
-    curRoom.players.find(elem => elem.turn).group.list[2].setColor('#f00')
+    curRoom.players.find(elem => elem.turn).group.list[2].setColor('#000')
 
     tmpPlayer = curRoom.players.find(elem => elem.username == username);
 
@@ -282,12 +398,44 @@ var PokerTableScene = new Phaser.Class({
     tmpPlayer.bet = data.player.bet
     tmpPlayer.turn = false;
 
-    tmpPlayer.group.list[2].setColor('#fff')
-    tmpPlayer.group.list[3].setText(`Bet: $${tmpPlayer.bet} (${tmpPlayer.total_bet})\n$${tmpPlayer.game_coin}`)
+    tmpPlayer.group.list[2].setColor('#000')
+    //tmpPlayer.group.list[3].setText(`Bet: $${tmpPlayer.bet} (${tmpPlayer.total_bet})`)
+    tmpPlayer.group.list[4].setText(`${tmpPlayer.game_coin}`)
 
     let tmpNextPlayer = curRoom.players.find(elem => elem.username == data.nextUsername);
     tmpNextPlayer.turn = true;
-    tmpNextPlayer.group.list[2].setColor('#f00')
+    tmpNextPlayer.group.list[2].setColor('#000')
+
+    if(tmpPlayer.total_bet > 10)
+    {
+      let green_count = Math.floor(tmpPlayer.total_bet / 200)
+      let blue_count = Math.floor((tmpPlayer.total_bet % 200) / 50)
+      let red_count = Math.floor((tmpPlayer.total_bet % 50) / 10)
+      
+      for (let i=0; i<green_count; i++) {
+        tmpPlayer.betPan.add(this.add.image(0, 20-2*i, 'green_coin').setOrigin(0.5, 0.5).setScale(0.3))
+      }
+
+      for (let j=0; j<blue_count; j++) {
+        tmpPlayer.betPan.add(this.add.image(-10, 10-2*j, 'blue_coin').setOrigin(0.5, 0.5).setScale(0.3))
+      }
+    
+      for (let n=0; n<red_count; n++) {
+        tmpPlayer.betPan.add(this.add.image(10, 20-2*n, 'red_coin').setOrigin(0.5, 0.5).setScale(0.3))
+      }
+      
+      switch (this.seatPos[tmpPlayer.tableSeat][0]) {
+        case 683:
+          tmpPlayer.betPan.add(this.add.text(100, 0, `${tmpPlayer.total_bet}`, { font: "bold 15px Arial", fill: "#000" }).setOrigin(0.5, 0.5))
+          break;
+        case 1148:
+          tmpPlayer.betPan.add(this.add.text(-80, -60, `${tmpPlayer.total_bet}`, { font: "bold 15px Arial", fill: "#000" }).setOrigin(0.5, 0.5))
+          break;
+        case 214:
+          tmpPlayer.betPan.add(this.add.text(80, -60, `${tmpPlayer.total_bet}`, { font: "bold 15px Arial", fill: "#000" }).setOrigin(0.5, 0.5))
+          break;
+      }      
+    }   
 
     if (tmpNextPlayer.username == username) { // enable the order part
       let maxBet = curRoom.players.reduce((prev, current) => prev.bet > current.bet ? prev : current).bet
@@ -315,9 +463,9 @@ var PokerTableScene = new Phaser.Class({
     let tmpPlayer = curRoom.players.find(elem => elem.username == data.player.username);
     let nextPlayer = curRoom.players.find(elem => elem.username == data.nextUsername);
 
-    tmpPlayer.group.list[2].setColor('#fff')
+    tmpPlayer.group.list[2].setColor('#000')
 
-    nextPlayer.group.list[2].setColor('#f00')
+    nextPlayer.group.list[2].setColor('#000')
 
     if (nextPlayer.username == username) {
       this.foldBtn.visible = false
@@ -336,11 +484,11 @@ var PokerTableScene = new Phaser.Class({
   fold: function (data) {
     let tmpPlayer = curRoom.players.find(elem => elem.username == data.player.username);
     tmpPlayer.status = 'folded'
-    tmpPlayer.group.list[2].setColor('#fff')
+    tmpPlayer.group.list[2].setColor('#000')
     tmpPlayer.group.list[3].setText(`FOLDED (${tmpPlayer.total_bet})`)
 
     let tmpNextPlayer = curRoom.players.find(elem => elem.username == data.nextUsername);
-    tmpNextPlayer.group.list[2].setColor('#f00')
+    tmpNextPlayer.group.list[2].setColor('#000')
     if (tmpNextPlayer.username == username) { // enable the order part
       let maxBet = curRoom.players.reduce((prev, current) => prev.bet > current.bet ? prev : current).bet
 
@@ -372,13 +520,14 @@ var PokerTableScene = new Phaser.Class({
       tmpPlayer.total_bet = players[i].total_bet
       tmpPlayer.bet = players[i].bet
 
-      tmpPlayer.group.list[2].setColor('#fff')
+      tmpPlayer.group.list[2].setColor('#000')
       if (tmpPlayer.status != 'folded') {
-        tmpPlayer.group.list[3].setText(`Bet: $${tmpPlayer.bet} (${tmpPlayer.total_bet})\n$${tmpPlayer.game_coin}`)
+        tmpPlayer.group.list[3].setText(`Bet: $${tmpPlayer.bet} (${tmpPlayer.total_bet})`)
+        tmpPlayer.group.list[4].setText(`${tmpPlayer.game_coin}`)
       }
     }
 
-    curRoom.players.find(elem => elem.turn).group.list[2].setColor('#f00')
+    curRoom.players.find(elem => elem.turn).group.list[2].setColor('#000')
 
     tmpPlayer = curRoom.players.find(elem => elem.username == username);
 
