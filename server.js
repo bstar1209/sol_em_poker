@@ -155,8 +155,12 @@ app.post("/getOwner", async (req, res) => {
   });
 })
 
-app.get('/', checkSignIn, (req, res) => {
-  res.render('home', {
+app.get('/', async (req, res) => {
+  res.render('dashboard')
+});
+
+app.get('/table', checkSignIn, (req, res) => {
+  res.render('table', {
     username: req.session.user.username
   })
 });
