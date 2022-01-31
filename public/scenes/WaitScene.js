@@ -12,19 +12,25 @@ var WaitScene = new Phaser.Class({
 
     this.load.image('room-sprite', 'images/room-sprite.png');
     this.load.image('top-bar', 'images/topbar.png');
-    //this.load.image('background', 'images/background.png');
+    this.load.image('logo', 'images/logo.png');
   },
   create: function  () {
     currentScene = this;
-    //this.add.image(0, 0, 'background').setOrigin(0).setScale(1)
+    this.add.image(0, 0, 'top-bar').setOrigin(0).setScale(1);
+    this.add.image(70, 70, 'logo').setOrigin(0, 0.5).setScale(0.2);
 
-    this.cameras.main.backgroundColor = Phaser.Display.Color.HexStringToColor("#fff");
-        
-    this.topbar = this.add.image(0, 0, 'top-bar').setOrigin(0, 0).setScale(1);
+    this.cameras.main.backgroundColor = Phaser.Display.Color.HexStringToColor("#fff");    
 
-    this.roomContainer = this.add.container(100, 200);
+    this.roomContainer = this.add.container(100, 250);
+    this.topbarContainer = this.add.container(500, 0);
 
-    this.add.image(50, 100, 'create_room_index0').setOrigin(0).setInteractive().on('pointerup', (pointer) => {
+    this.topbarContainer.add(this.add.text(0, 20, `Play Now`, { font: "bold 20px Arial", fill: "#fff" }).setOrigin(0).setInteractive().on('pointerup', (pointer) => {
+      console.log('pointer', pointer);
+    }));
+    this.topbarContainer.add(this.add.text(200, 20, `Statistics`, { font: "bold 20px Arial", fill: "#fff" }));
+    this.topbarContainer.add(this.add.text(400, 20, `FAQ`, { font: "bold 20px Arial", fill: "#fff" }));
+
+    this.add.image(50, 150, 'create_room_index0').setOrigin(0).setInteractive().on('pointerup', (pointer) => {
       this.betSol({
         type: 0,
         order: 'create'
@@ -39,7 +45,7 @@ var WaitScene = new Phaser.Class({
       // });
     });
 
-    this.add.image(200, 100, 'create_room_index1').setOrigin(0).setInteractive().on('pointerup', (pointer) => {
+    this.add.image(200, 150, 'create_room_index1').setOrigin(0).setInteractive().on('pointerup', (pointer) => {
       this.betSol({
         type: 1,
         order: 'create'
@@ -54,7 +60,7 @@ var WaitScene = new Phaser.Class({
       // });
     });
 
-    this.add.image(350, 100, 'create_room_index2').setOrigin(0).setInteractive().on('pointerup', (pointer) => {
+    this.add.image(350, 150, 'create_room_index2').setOrigin(0).setInteractive().on('pointerup', (pointer) => {
       this.betSol({
         type: 2,
         order: 'create'
@@ -69,7 +75,7 @@ var WaitScene = new Phaser.Class({
       // });
     });
 
-    this.add.image(500, 100, 'create_room_index3').setOrigin(0).setInteractive().on('pointerup', (pointer) => {
+    this.add.image(500, 150, 'create_room_index3').setOrigin(0).setInteractive().on('pointerup', (pointer) => {
       this.betSol({
         type: 3,
         order: 'create'

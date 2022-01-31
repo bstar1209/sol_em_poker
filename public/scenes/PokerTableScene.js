@@ -51,23 +51,23 @@ var PokerTableScene = new Phaser.Class({
     this.layedCardsGroup = this.add.container(550, 300)
     this.pokerTable.add(this.layedCardsGroup)
 
-    this.foldBtn = this.add.image(0, 400, 'fold').setOrigin(0).setScale(1).setInteractive().on('pointerup', (pointer) => {
+    this.foldBtn = this.add.image(100, 670, 'fold').setOrigin(0).setScale(1).setInteractive().on('pointerup', (pointer) => {
       sendFold({
         username: username,
       })
     })
-    this.checkBtn = this.add.image(150, 400, 'check').setOrigin(0).setScale(1).setInteractive().on('pointerup', (pointer) => {
+    this.checkBtn = this.add.image(250, 670, 'check').setOrigin(0).setScale(1).setInteractive().on('pointerup', (pointer) => {
       sendCheck({
         username: username,
       })
     })
-    this.raiseBtn = this.add.image(150, 400, 'raise').setOrigin(0).setScale(1).setInteractive().on('pointerup', (pointer) => {
+    this.raiseBtn = this.add.image(400, 670, 'raise').setOrigin(0).setScale(1).setInteractive().on('pointerup', (pointer) => {
       sendRaise({
         username: username,
       });
     })
 
-    this.pluschipBtn = this.add.container(0, 600)
+    this.pluschipBtn = this.add.container(600, 670)
     this.pluschipBtn.add(this.add.image(0, 0, '5_chip').setOrigin(0).setScale(1).setInteractive().on('pointerup', (pointer) => {
       sendPlusCall({
         username: username,
@@ -127,8 +127,7 @@ var PokerTableScene = new Phaser.Class({
       [214, 248],
       [1148, 248],
     ];
-    console.log("current room", curRoom);
-    
+        
     for (let i=0; i < curRoom.players.length; i++){
       let player = curRoom.players[i];
       if (player.username == username) {
@@ -346,9 +345,10 @@ var PokerTableScene = new Phaser.Class({
           tmpPlayer.coin.add(this.add.image(-10, -20-2*n, 'red_coin').setOrigin(0.5, 0.5).setScale(0.3))
         }
         
-      }        
+      }  
+      //draw bet panel 
+      this.reDrawBet(tmpPlayer)      
       
-
       if (tmpPlayer.username == username) {
         tmpPlayer.card.add(this.add.image(0, 70, tmpPlayer.handed[0]).setOrigin(0).setScale(0.1))
         tmpPlayer.card.add(this.add.image(60, 70, tmpPlayer.handed[1]).setOrigin(0).setScale(0.1))
@@ -356,7 +356,7 @@ var PokerTableScene = new Phaser.Class({
         tmpPlayer.card.add(this.add.image(0, 70, 'card_back').setOrigin(0).setScale(0.1))
         tmpPlayer.card.add(this.add.image(30, 70, 'card_back').setOrigin(0).setScale(0.1))
       }
-    }
+    }      
 
     let dealerName = players.find(elem => elem.dealer).username;
     let tmpPlayer = curRoom.players.find(elem => elem.username == dealerName);
@@ -406,36 +406,8 @@ var PokerTableScene = new Phaser.Class({
     tmpNextPlayer.turn = true;
     tmpNextPlayer.group.list[2].setColor('#000')
 
-    if(tmpPlayer.total_bet > 10)
-    {
-      let green_count = Math.floor(tmpPlayer.total_bet / 200)
-      let blue_count = Math.floor((tmpPlayer.total_bet % 200) / 50)
-      let red_count = Math.floor((tmpPlayer.total_bet % 50) / 10)
-      
-      for (let i=0; i<green_count; i++) {
-        tmpPlayer.betPan.add(this.add.image(0, 20-2*i, 'green_coin').setOrigin(0.5, 0.5).setScale(0.3))
-      }
-
-      for (let j=0; j<blue_count; j++) {
-        tmpPlayer.betPan.add(this.add.image(-10, 10-2*j, 'blue_coin').setOrigin(0.5, 0.5).setScale(0.3))
-      }
-    
-      for (let n=0; n<red_count; n++) {
-        tmpPlayer.betPan.add(this.add.image(10, 20-2*n, 'red_coin').setOrigin(0.5, 0.5).setScale(0.3))
-      }
-      
-      switch (this.seatPos[tmpPlayer.tableSeat][0]) {
-        case 683:
-          tmpPlayer.betPan.add(this.add.text(100, 0, `${tmpPlayer.total_bet}`, { font: "bold 15px Arial", fill: "#000" }).setOrigin(0.5, 0.5))
-          break;
-        case 1148:
-          tmpPlayer.betPan.add(this.add.text(-80, -60, `${tmpPlayer.total_bet}`, { font: "bold 15px Arial", fill: "#000" }).setOrigin(0.5, 0.5))
-          break;
-        case 214:
-          tmpPlayer.betPan.add(this.add.text(80, -60, `${tmpPlayer.total_bet}`, { font: "bold 15px Arial", fill: "#000" }).setOrigin(0.5, 0.5))
-          break;
-      }      
-    }   
+    //draw bet panel 
+    this.reDrawBet(tmpPlayer)
 
     if (tmpNextPlayer.username == username) { // enable the order part
       let maxBet = curRoom.players.reduce((prev, current) => prev.bet > current.bet ? prev : current).bet
@@ -458,6 +430,42 @@ var PokerTableScene = new Phaser.Class({
 
       this.pluschipBtn.visible = false
     }
+  },
+  reDrawBet: function (data){
+    if(data.total_bet >= 10)
+    {
+      let index = curRoom.players.findIndex(elem => elem.username == data.username);
+      curRoom.players[index].betPan.removeAll();
+
+      let green_count = Math.floor(data.total_bet / 200)
+      let blue_count = Math.floor((data.total_bet % 200) / 50)
+      let red_count = Math.floor((data.total_bet % 50) / 10)
+      
+      for (let i=0; i<green_count; i++) {
+        data.betPan.add(this.add.image(0, 20-2*i, 'green_coin').setOrigin(0.5, 0.5).setScale(0.3))
+      }
+
+      for (let j=0; j<blue_count; j++) {
+        data.betPan.add(this.add.image(-10, 10-2*j, 'blue_coin').setOrigin(0.5, 0.5).setScale(0.3))
+      }
+    
+      for (let n=0; n<red_count; n++) {
+        data.betPan.add(this.add.image(10, 20-2*n, 'red_coin').setOrigin(0.5, 0.5).setScale(0.3))
+      }
+      
+      switch (this.seatPos[data.tableSeat][0]) {
+        case 683:
+          data.betPan.add(this.add.text(100, 0, `${data.total_bet}`, { font: "bold 15px Arial", fill: "#000" }).setOrigin(0.5, 0.5))
+          break;
+        case 1148:
+          data.betPan.add(this.add.text(-80, -60, `${data.total_bet}`, { font: "bold 15px Arial", fill: "#000" }).setOrigin(0.5, 0.5))
+          break;
+        case 214:
+          data.betPan.add(this.add.text(80, -60, `${data.total_bet}`, { font: "bold 15px Arial", fill: "#000" }).setOrigin(0.5, 0.5))
+          break;
+      } 
+    }         
+     
   },
   check: function (data) {
     let tmpPlayer = curRoom.players.find(elem => elem.username == data.player.username);

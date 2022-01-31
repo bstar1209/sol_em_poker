@@ -10,7 +10,11 @@
     "express": "^4.17.1",
     "express-session": "^1.17.2",
     "mongoose": "^6.0.14",
+    "nodemon": "^2.0.15",
     "phaser": "^3.55.2",
     "socket.io": "^4.3.2"
+  },
+  "scripts": {
+    "start": "nodemon server.js"
   }
 }
