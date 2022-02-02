@@ -17,7 +17,6 @@ var config = {
     }
   },
   scene: [
-    WaitScene,
     PokerTableScene,
   ]
 };
@@ -28,4 +27,4 @@ let currentScene;
 
 let curRoom;
 
-game.scene.start("WaitScene");
+game.scene.start("PokerTableScene");

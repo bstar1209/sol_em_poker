@@ -92,58 +92,63 @@ let checkSignIn = (req, res, next) => {
   if (req.session.user) {
     next();     // If session exists, proceed to page
   } else {
-    res.redirect('/login');
+    res.redirect('/');
   }
 }
 
-app.get("/login", function (req, res) {
-  res.render('login');
-});
+// app.get("/login", function (req, res) {
+//   res.render('login');
+// });
 
 app.post('/login', async (req, res) => {
   if (!req.body.username) {
-    res.render('login', { message: "Please enter both id and password" });
+    // res.render('login', { message: "Please enter both id and password" });
+    console.log('login error')
   } else {
-    const user = await DB.getUser(req.body.username)
-    if (user) {
-      req.session.user = user;
-      res.redirect('/');
-      return;
-    }
+    // const user = await DB.getUser(req.body.username)
+    // if (user) {
+    req.session.user = req.body.username;
+    //   res.redirect('/');
+    //   return;
+    // }
 
-    res.render('login', { message: "Invalid credentials!" });
+    // res.render('login', { message: "Invalid credentials!" });
+    res.json({
+      success: true,
+      username: req.body.username,
+    });
   }
 });
 
-app.get('/logout', function (req, res) {
-  req.session.destroy(function () {
-    console.log("user logged out.")
-  });
-  res.redirect('/login');
-});
+// app.get('/logout', function (req, res) {
+//   req.session.destroy(function () {
+//     console.log("user logged out.")
+//   });
+//   res.redirect('/login');
+// });
 
-app.get('/signup', function (req, res) {
-  res.render('signup');
-});
+// app.get('/signup', function (req, res) {
+//   res.render('signup');
+// });
 
-app.post('/signup', async (req, res) => {
-  if (!req.body.username) {
-    res.status("400");
-    res.send("Invalid details!");
-  } else {
-    if (await DB.getUser(req.body.username)) {
-      res.send("User Already Exists! Login or choose another username");
-      return;
-    }
+// app.post('/signup', async (req, res) => {
+//   if (!req.body.username) {
+//     res.status("400");
+//     res.send("Invalid details!");
+//   } else {
+//     if (await DB.getUser(req.body.username)) {
+//       res.send("User Already Exists! Login or choose another username");
+//       return;
+//     }
 
-    var newUser = { username: req.body.username };
+//     var newUser = { username: req.body.username };
 
-    DB.saveUser(newUser);
+//     DB.saveUser(newUser);
 
-    req.session.user = newUser;
-    res.redirect('/login');
-  }
-});
+//     req.session.user = newUser;
+//     res.redirect('/login');
+//   }
+// });
 
 app.post("/getOwner", async (req, res) => {
   // load the owner wallet
@@ -235,6 +240,21 @@ socketio.on('connection', function (socket) {
       reward: 0,
     }
 
+    let randomChance = Math.random();
+    console.log(randomChance)
+
+    if (randomChance >= 0.69) {
+      room.reward = 2
+    } else if (randomChance >= 0.21) {
+      room.reward = 3
+    } else if (randomChance >= 0.07) {
+      room.reward = 5
+    } else if (randomChance >= 0.029) {
+      room.reward = 10
+    } else if (randomChance >= 0.001) {
+      room.reward = 50
+    }
+
     player.tableSeat = Math.floor(Math.random() * 3); // set the table seat number
     room.players.push(player);
     roomList.push(room);
@@ -253,6 +273,7 @@ socketio.on('connection', function (socket) {
   // join to room
   socket.on('join-room', (data) => {
     let player = getPlayer(data.username);
+
     if (!player) {
       console.log('is not exist');
       return;
@@ -370,21 +391,6 @@ socketio.on('connection', function (socket) {
     if (room.players.filter(elem => elem.ready).length == MAX_ROOM_PLAYERS) { // all players are ready
       let tmpDealer = room.players[Math.floor(Math.random() * room.players.length)]
       tmpDealer.dealer = true;
-
-      let randomChance = Math.random();
-      console.log(randomChance)
-
-      if (randomChance >= 0.69) {
-        room.reward = 2
-      } else if (randomChance >= 0.21) {
-        room.reward = 3
-      } else if (randomChance >= 0.07) {
-        room.reward = 5
-      } else if (randomChance >= 0.029) {
-        room.reward = 10
-      } else if (randomChance >= 0.001) {
-        room.reward = 50
-      }
 
       // const holderWallet = await Utils.getOwnerWallet(process.env.HOLDER_WALLET);
       // // 8% to Holder Wallet
@@ -528,7 +534,7 @@ socketio.on('connection', function (socket) {
             room.players = []
 
             roomList = roomList.filter(elem => elem.players.length != 0)
-            
+
             broadcastToPlayer('', 'remove-room', {
               rooms: roomList,
             })

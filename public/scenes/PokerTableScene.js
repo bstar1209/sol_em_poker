@@ -40,8 +40,12 @@ var PokerTableScene = new Phaser.Class({
 
     this.load.image('card_back', 'images/cards/card_back.png')
   },
-  create: function () {
+  create: async function () {
     currentScene = this;
+
+    let provider = await getProvider();
+    username = provider.publicKey.toString()
+    connectNewPlayer(username);
 
     this.pokerBoard = this.add.image(0, 0, 'poker_board').setOrigin(0).setScale(1)
 
@@ -122,6 +126,9 @@ var PokerTableScene = new Phaser.Class({
       sendLeaveRoom(username)
     })
 
+    return;
+  },
+  initRoom: function () {
     this.seatPos = [
       [683, 597],
       [214, 248],
@@ -154,6 +161,7 @@ var PokerTableScene = new Phaser.Class({
         }
       }
     }
+    
     // load the players
     for (let i = 0; i < curRoom.players.length; i++) {
       let player = curRoom.players[i];
@@ -177,7 +185,6 @@ var PokerTableScene = new Phaser.Class({
           break;
       }
       
-
       this.pokerTable.add(player.group) // sit the player on the table
       this.pokerTable.add(player.card)
 

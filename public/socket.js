@@ -1,13 +1,13 @@
 let socket = io();
 
-let connectNewPlayer = () => {
+let connectNewPlayer = (username) => {
   socket.emit('new-player', {
     username: username
   });
 }
 
 socket.on('room-list', (data) => {
-  currentScene.redrawAllRooms(data)
+  redrawAllRooms(data)
 })
 
 socket.on('player-list', (data) => {
@@ -16,17 +16,11 @@ socket.on('player-list', (data) => {
   if (player.roomId != 0) { // exist the room info
     switch (player.scene) {
       case 'WaitScene':
-        currentScene.scene.start("HeroChoiseScene");
-        break;
-      case 'HeroChoiseScene':
-        currentScene.scene.start("HeroChoiseScene");
-        break;
-      case 'LoadingScene':
-        currentScene.scene.start("LoadingScene");
+
         break;
       case 'PokerTableScene':
         curRoom = data.room;
-        currentScene.scene.start("PokerTableScene");
+        currentScene.initRoom()
         break;
       default:
         break;
@@ -40,20 +34,29 @@ let sendCreateRoom = (data) => {
 }
 
 socket.on('create-room', (data) => {
-  switch (currentScene.scene.key) {
-    case "WaitScene":
-      if (data.username == username) { // you create the room
-        curRoom = data.room;
-        currentScene.scene.start("PokerTableScene");
-      } else {
-        currentScene.redrawAllRooms({
-          rooms: data.rooms
-        })
-      }
-      break;
-    default:
-      break;
+  if (data.username == username) { // you create the room
+    curRoom = data.room;
+    // currentScene.scene.start("PokerTableScene");
+    window.location.href = '/table'
+  } else {
+    redrawAllRooms(data)
   }
+
+  // window.location.href = '/table'
+  // switch (currentScene.scene.key) {
+  //   case "WaitScene":
+  //     if (data.username == username) { // you create the room
+  //       curRoom = data.room;
+  //       currentScene.scene.start("PokerTableScene");
+  //     } else {
+  //       currentScene.redrawAllRooms({
+  //         rooms: data.rooms
+  //       })
+  //     }
+  //     break;
+  //   default:
+  //     break;
+  // }
 })
 
 // join to room
@@ -62,9 +65,12 @@ let sendJoinRoom = (data) => {
 }
 
 socket.on('join-room', (data) => {
+  console.log(data)
+
   if (data.username == username) { // you join the room
     curRoom = data.room;
-    currentScene.scene.start("PokerTableScene");
+    // currentScene.scene.start("PokerTableScene");
+    window.location.href = '/table'
   } else { // other join your room
     curRoom.players.push(data.player)
     currentScene.joinToRoom(data.player)
